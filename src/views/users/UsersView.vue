@@ -5,63 +5,119 @@
       <button @click="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">+ Add User</button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm p-4">
-      <input v-model="search" @input="fetchUsers" type="text" placeholder="Search by name or email..."
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <!-- Tabs -->
+    <div class="bg-white rounded-xl shadow-sm p-1 flex gap-1 w-fit">
+      <button @click="activeTab = 'active'" :class="activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">
+        Active Users
+      </button>
+      <button @click="activeTab = 'pending'; fetchPendingUsers()" :class="activeTab === 'pending' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">
+        Pending Approval
+        <span v-if="pendingUsers.length > 0" class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ pendingUsers.length }}</span>
+      </button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b">
-          <tr class="text-left text-gray-500">
-            <th class="px-4 py-3">#</th>
-            <th class="px-4 py-3">Name</th>
-            <th class="px-4 py-3">Email</th>
-            <th class="px-4 py-3">Role</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
-          <tr v-else-if="users.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No users found</td></tr>
-          <tr v-for="user in users" :key="user.id" class="border-b hover:bg-gray-50 transition">
-            <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
-                <span class="font-medium text-gray-700">{{ user.name }}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
-            <td class="px-4 py-3">
-              <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || '—' }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <span :class="user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ user.is_active ? 'Active' : 'Inactive' }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-2">
-                <button @click="openModal(user)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded-lg text-xs font-medium transition">✏️ Edit</button>
-                <button @click="toggleStatus(user)" :class="user.is_active ? 'bg-red-100 text-red-500 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'" class="px-3 py-1 rounded-lg text-xs font-medium transition">
-                  {{ user.is_active ? '🔒 Deactivate' : '✅ Activate' }}
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="px-4 py-3 flex justify-between items-center border-t text-sm text-gray-500">
-        <span>Total: {{ pagination.total }} users</span>
-        <div class="flex gap-2">
-          <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Prev</button>
-          <span class="px-3 py-1">{{ pagination.current_page }} / {{ pagination.last_page }}</span>
-          <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Next</button>
+    <!-- Active Users -->
+    <div v-if="activeTab === 'active'">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <input v-model="search" @input="fetchUsers" type="text" placeholder="Search by name or email..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr class="text-left text-gray-500">
+              <th class="px-4 py-3">#</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Email</th>
+              <th class="px-4 py-3">Role</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
+            <tr v-else-if="users.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No users found</td></tr>
+            <tr v-for="user in users" :key="user.id" class="border-b hover:bg-gray-50 transition">
+              <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
+                  <span class="font-medium text-gray-700">{{ user.name }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
+              <td class="px-4 py-3">
+                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || '—' }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <span :class="user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ user.is_active ? 'Active' : 'Inactive' }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <button @click="openModal(user)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded-lg text-xs font-medium transition">✏️ Edit</button>
+                  <button @click="toggleStatus(user)" :class="user.is_active ? 'bg-red-100 text-red-500 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'" class="px-3 py-1 rounded-lg text-xs font-medium transition">
+                    {{ user.is_active ? '🔒 Deactivate' : '✅ Activate' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 flex justify-between items-center border-t text-sm text-gray-500">
+          <span>Total: {{ pagination.total }} users</span>
+          <div class="flex gap-2">
+            <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Prev</button>
+            <span class="px-3 py-1">{{ pagination.current_page }} / {{ pagination.last_page }}</span>
+            <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Next</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Pending Users -->
+    <div v-if="activeTab === 'pending'">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr class="text-left text-gray-500">
+              <th class="px-4 py-3">#</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Email</th>
+              <th class="px-4 py-3">Requested Role</th>
+              <th class="px-4 py-3">Registered</th>
+              <th class="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="pendingLoading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
+            <tr v-else-if="pendingUsers.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No pending users</td></tr>
+            <tr v-for="user in pendingUsers" :key="user.id" class="border-b hover:bg-gray-50 transition">
+              <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
+                  <span class="font-medium text-gray-700">{{ user.name }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
+              <td class="px-4 py-3">
+                <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || 'staff' }}</span>
+              </td>
+              <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(user.created_at) }}</td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <button @click="openApproveModal(user)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
+                  <button @click="rejectUser(user)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black bg-opacity-40" @click="closeModal"></div>
       <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
@@ -86,7 +142,8 @@
               <option value="">Select Role</option>
               <option value="super-admin">Super Admin</option>
               <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
+              <option value="fixed-asset-admin">Fixed Asset Admin</option>
+              <option value="consumable-admin">Consumable Admin</option>
               <option value="staff">Staff</option>
             </select>
           </div>
@@ -101,6 +158,31 @@
         </form>
       </div>
     </div>
+
+    <!-- Approve Modal -->
+    <div v-if="showApproveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showApproveModal = false"></div>
+      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h3 class="text-lg font-bold text-gray-700 mb-1">Approve User</h3>
+        <p class="text-sm text-gray-500 mb-4">{{ selectedUser?.name }} ({{ selectedUser?.email }})</p>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Assign Role</label>
+            <select v-model="approveRole" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="staff">Staff</option>
+              <option value="fixed-asset-admin">Fixed Asset Admin</option>
+              <option value="consumable-admin">Consumable Admin</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+            <button @click="approveUser" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm transition">✅ Approve & Activate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -109,22 +191,41 @@ import { ref, onMounted } from 'vue'
 import api from '../../services/api'
 
 const users = ref([])
+const pendingUsers = ref([])
 const loading = ref(false)
+const pendingLoading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
+const showApproveModal = ref(false)
 const editingUser = ref(null)
+const selectedUser = ref(null)
 const formError = ref(null)
 const search = ref('')
+const activeTab = ref('active')
+const approveRole = ref('staff')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const form = ref({ name: '', email: '', password: '', role: '', is_active: true })
+
+function formatDate(date) {
+  if (!date) return '—'
+  return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
 async function fetchUsers(page = 1) {
   loading.value = true
   try {
-    const res = await api.get('/users', { params: { page, per_page: 15, search: search.value } })
+    const res = await api.get('/users', { params: { page, per_page: 15, search: search.value, is_active: 1 } })
     users.value = res.data.data.data
     pagination.value = { current_page: res.data.data.current_page, last_page: res.data.data.last_page, total: res.data.data.total }
   } finally { loading.value = false }
+}
+
+async function fetchPendingUsers() {
+  pendingLoading.value = true
+  try {
+    const res = await api.get('/users', { params: { per_page: 100, is_active: 0 } })
+    pendingUsers.value = res.data.data.data
+  } finally { pendingLoading.value = false }
 }
 
 function openModal(user = null) {
@@ -150,6 +251,24 @@ async function saveUser() {
 async function toggleStatus(user) {
   await api.patch(`/users/${user.id}/toggle-status`)
   fetchUsers()
+}
+
+function openApproveModal(user) {
+  selectedUser.value = user
+  approveRole.value = user.roles?.[0]?.name || 'staff'
+  showApproveModal.value = true
+}
+
+async function approveUser() {
+  await api.patch(`/users/${selectedUser.value.id}/approve`, { role: approveRole.value })
+  showApproveModal.value = false
+  fetchPendingUsers()
+}
+
+async function rejectUser(user) {
+  if (!confirm(`Reject and delete ${user.name}?`)) return
+  await api.delete(`/users/${user.id}`)
+  fetchPendingUsers()
 }
 
 function changePage(page) {

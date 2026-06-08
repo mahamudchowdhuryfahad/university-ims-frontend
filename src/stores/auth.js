@@ -8,14 +8,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value)
 
-  async function login(email, password) {
-    const res = await api.post('/auth/login', { email, password })
-    token.value = res.data.data.token
-    user.value  = res.data.data.user
-    localStorage.setItem('token', token.value)
-    localStorage.setItem('user', JSON.stringify(user.value))
-    return res.data
-  }
+  async function login(credentials) {
+  const res = await api.post('/auth/login', credentials)
+  token.value = res.data.data.token
+  user.value  = res.data.data.user
+  localStorage.setItem('token', token.value)
+  localStorage.setItem('user', JSON.stringify(user.value))
+  return res.data
+}
 
   async function logout() {
     try { await api.post('/auth/logout') } catch {}
