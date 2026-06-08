@@ -48,54 +48,51 @@
     </div>
 
     <!-- Adjust Modal -->
-    <div v-if="showAdjustModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showAdjustModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-gray-700 mb-4">Adjust Stock</h3>
-        <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
-        <form @submit.prevent="adjustStock" class="space-y-3">
-          <div>
-            <label class="text-xs font-medium text-gray-600">Product *</label>
-            <select v-model="form.product_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="">Select Product</option>
-              <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Warehouse *</label>
-            <select v-model="form.warehouse_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="">Select Warehouse</option>
-              <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Type *</label>
-            <select v-model="form.type" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="add">Add Stock</option>
-              <option value="subtract">Subtract Stock</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Quantity *</label>
-            <input v-model="form.quantity" type="number" min="1" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Note</label>
-            <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div class="flex gap-3 pt-2">
-            <button type="button" @click="showAdjustModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button type="submit" :disabled="saving" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Saving...' : 'Adjust' }}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <AppModal :show="showAdjustModal" title="Adjust Stock" @close="showAdjustModal = false">
+      <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
+      <form @submit.prevent="adjustStock" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Product *</label>
+          <select v-model="form.product_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Product</option>
+            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Warehouse *</label>
+          <select v-model="form.warehouse_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Warehouse</option>
+            <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Type *</label>
+          <select v-model="form.type" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="add">Add Stock</option>
+            <option value="subtract">Subtract Stock</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Quantity *</label>
+          <input v-model="form.quantity" type="number" min="1" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Note</label>
+          <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="showAdjustModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Adjust' }}</button>
+        </div>
+      </form>
+    </AppModal>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../services/api'
+import AppModal from '../../components/ui/AppModal.vue'
 
 const stocks = ref([])
 const products = ref([])

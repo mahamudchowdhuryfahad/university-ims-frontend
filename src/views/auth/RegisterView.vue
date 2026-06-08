@@ -82,8 +82,8 @@
       </p>
 
       <div class="mt-5 pt-4 border-t border-gray-100 text-center">
-        <p class="text-xs text-gray-400">Lord Advance Me In Knowledge</p>
-      </div>
+  <p class="text-xs text-gray-400">© {{ new Date().getFullYear() }} CIU Software Team. All Rights Reserved.</p>
+</div>
     </div>
   </div>
 </template>

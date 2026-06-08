@@ -78,6 +78,7 @@ const navItems = [
   { name: 'Rooms',            to: '/rooms',            icon: '🚪' },
   { name: 'Employees',        to: '/employees',        icon: '👨‍💼' },
   { name: 'Requisitions',     to: '/requisitions',     icon: '📋' },
+  { name: 'Maintenance',      to: '/maintenance',      icon: '🔧' },
 ]
 
 const currentPageTitle = computed(() => {

@@ -50,61 +50,56 @@
     </div>
 
     <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="closeModal"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-gray-700 mb-4">{{ editingBuilding ? 'Edit Building' : 'Add Building' }}</h3>
-        <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
-        <form @submit.prevent="saveBuilding" class="space-y-3">
-          <div class="grid grid-cols-2 gap-3">
-            <div class="col-span-2">
-              <label class="text-xs font-medium text-gray-600">Building Name *</label>
-              <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label class="text-xs font-medium text-gray-600">Code *</label>
-              <input v-model="form.code" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label class="text-xs font-medium text-gray-600">Floors</label>
-              <input v-model="form.floors" type="number" min="1" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div class="col-span-2">
-              <label class="text-xs font-medium text-gray-600">Address</label>
-              <input v-model="form.address" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div class="col-span-2 flex items-center gap-2">
-              <input v-model="form.is_active" type="checkbox" id="is_active" />
-              <label for="is_active" class="text-sm text-gray-600">Active</label>
-            </div>
+    <AppModal :show="showModal" :title="editingBuilding ? 'Edit Building' : 'Add Building'" @close="closeModal">
+      <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
+      <form @submit.prevent="saveBuilding" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2">
+            <label class="text-xs font-medium text-gray-600">Building Name *</label>
+            <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-          <div class="flex gap-3 pt-2">
-            <button type="button" @click="closeModal" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button type="submit" :disabled="saving" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Saving...' : 'Save' }}</button>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Code *</label>
+            <input v-model="form.code" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-        </form>
-      </div>
-    </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Floors</label>
+            <input v-model="form.floors" type="number" min="1" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="col-span-2">
+            <label class="text-xs font-medium text-gray-600">Address</label>
+            <input v-model="form.address" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="col-span-2 flex items-center gap-2">
+            <input v-model="form.is_active" type="checkbox" id="is_active" />
+            <label for="is_active" class="text-sm text-gray-600">Active</label>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="closeModal" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Save' }}</button>
+        </div>
+      </form>
+    </AppModal>
 
     <!-- Delete Confirm -->
-    <div v-if="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showConfirm = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
+    <AppModal :show="showConfirm" title="Delete Building" max-width="max-w-sm" @close="showConfirm = false">
+      <div class="text-center">
         <div class="text-5xl mb-4">🗑️</div>
-        <h3 class="text-lg font-bold text-gray-700 mb-2">Delete Building</h3>
         <p class="text-sm text-gray-500 mb-6">Are you sure? This action cannot be undone.</p>
         <div class="flex gap-3">
           <button @click="showConfirm = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button @click="confirmDelete" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm transition">Yes, Delete</button>
         </div>
       </div>
-    </div>
+    </AppModal>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../services/api'
+import AppModal from '../../components/ui/AppModal.vue'
 
 const buildings = ref([])
 const loading = ref(false)

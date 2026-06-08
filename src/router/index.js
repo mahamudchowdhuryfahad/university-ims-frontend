@@ -37,6 +37,7 @@ const routes = [
       { path: 'current-assets',   name: 'current-assets',   component: () => import('../views/current-assets/CurrentAssetsView.vue') },
       { path: 'asset-categories', name: 'asset-categories', component: () => import('../views/asset-categories/AssetCategoriesView.vue') },
       { path: 'requisitions',     name: 'requisitions',     component: () => import('../views/requisitions/RequisitionsView.vue') },
+      { path: 'maintenance',      name: 'maintenance',      component: () => import('../views/maintenance/MaintenanceView.vue') },
     ],
   },
 ]

@@ -54,115 +54,99 @@
     </div>
 
     <!-- New Purchase Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-bold text-gray-700 mb-4">New Purchase</h3>
-        <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
-        <form @submit.prevent="savePurchase" class="space-y-4">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs font-medium text-gray-600">Supplier *</label>
-              <select v-model="form.supplier_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-                <option value="">Select Supplier</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs font-medium text-gray-600">Warehouse *</label>
-              <select v-model="form.warehouse_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-                <option value="">Select Warehouse</option>
-                <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
+    <AppModal :show="showModal" title="New Purchase" max-width="max-w-2xl" @close="showModal = false">
+      <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
+      <form @submit.prevent="savePurchase" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Supplier *</label>
+            <select v-model="form.supplier_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Supplier</option>
+              <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Warehouse *</label>
+            <select v-model="form.warehouse_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Warehouse</option>
+              <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
+            </select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-xs font-medium text-gray-600">Note</label>
+            <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-sm font-medium text-gray-600">Items *</label>
+            <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
+          </div>
+          <div v-for="(item, index) in form.items" :key="index" class="grid grid-cols-8 gap-2 mb-2 items-center">
+            <div class="col-span-4">
+              <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none">
+                <option value="">Select Product</option>
+                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
             <div class="col-span-2">
-              <label class="text-xs font-medium text-gray-600">Note</label>
-              <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input v-model="item.quantity" type="number" min="1" placeholder="Qty" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
+            </div>
+            <div class="col-span-1">
+              <input v-model="item.unit_price" type="number" min="0" placeholder="Price" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
+            </div>
+            <div class="col-span-1 text-center">
+              <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">×</button>
             </div>
           </div>
-
-          <!-- Items -->
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <label class="text-sm font-medium text-gray-600">Items *</label>
-              <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
-            </div>
-            <div v-for="(item, index) in form.items" :key="index" class="grid grid-cols-8 gap-2 mb-2 items-center">
-              <div class="col-span-4">
-                <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none">
-                  <option value="">Select Product</option>
-                  <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-                </select>
-              </div>
-              <div class="col-span-2">
-                <input v-model="item.quantity" type="number" min="1" placeholder="Qty" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
-              </div>
-              <div class="col-span-1">
-                <input v-model="item.unit_price" type="number" min="0" placeholder="Price" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
-              </div>
-              <div class="col-span-1 text-center">
-                <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">×</button>
-              </div>
-            </div>
-            <div class="text-right text-sm font-semibold text-gray-700 mt-2">
-              Total: ৳{{ formatNumber(totalAmount) }}
-            </div>
+          <div class="text-right text-sm font-semibold text-gray-700 mt-2">
+            Total: ৳{{ formatNumber(totalAmount) }}
           </div>
-
-          <div class="flex gap-3">
-            <button type="button" @click="showModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button type="submit" :disabled="saving" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Saving...' : 'Save' }}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="showModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Save' }}</button>
+        </div>
+      </form>
+    </AppModal>
 
     <!-- View Modal -->
-    <div v-if="showViewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showViewModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-gray-700">Purchase Details</h3>
-          <button @click="showViewModal = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+    <AppModal :show="showViewModal" title="Purchase Details" max-width="max-w-2xl" @close="showViewModal = false">
+      <div v-if="selectedPurchase" class="space-y-4">
+        <div class="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-gray-500">Reference:</span> <span class="font-medium">{{ selectedPurchase.reference }}</span></div>
+          <div><span class="text-gray-500">Status:</span> <span class="font-medium capitalize ml-1">{{ selectedPurchase.status }}</span></div>
+          <div><span class="text-gray-500">Supplier:</span> <span class="font-medium">{{ selectedPurchase.supplier?.name }}</span></div>
+          <div><span class="text-gray-500">Warehouse:</span> <span class="font-medium">{{ selectedPurchase.warehouse?.name }}</span></div>
+          <div><span class="text-gray-500">Total:</span> <span class="font-medium">৳{{ formatNumber(selectedPurchase.total_amount) }}</span></div>
         </div>
-        <div v-if="selectedPurchase" class="space-y-4">
-          <div class="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-gray-500">Reference:</span> <span class="font-medium">{{ selectedPurchase.reference }}</span></div>
-            <div><span class="text-gray-500">Status:</span> <span class="font-medium capitalize ml-1">{{ selectedPurchase.status }}</span></div>
-            <div><span class="text-gray-500">Supplier:</span> <span class="font-medium">{{ selectedPurchase.supplier?.name }}</span></div>
-            <div><span class="text-gray-500">Warehouse:</span> <span class="font-medium">{{ selectedPurchase.warehouse?.name }}</span></div>
-            <div><span class="text-gray-500">Total:</span> <span class="font-medium">৳{{ formatNumber(selectedPurchase.total_amount) }}</span></div>
-          </div>
-          <div>
-            <h4 class="text-sm font-semibold text-gray-600 mb-2">Items</h4>
-            <table class="w-full text-sm border rounded-lg overflow-hidden">
-              <thead class="bg-gray-50">
-                <tr class="text-left text-gray-500">
-                  <th class="px-3 py-2">Product</th>
-                  <th class="px-3 py-2">Qty</th>
-                  <th class="px-3 py-2">Unit Price</th>
-                  <th class="px-3 py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in selectedPurchase.items" :key="item.id" class="border-t">
-                  <td class="px-3 py-2">{{ item.product?.name }}</td>
-                  <td class="px-3 py-2">{{ item.quantity }}</td>
-                  <td class="px-3 py-2">৳{{ formatNumber(item.unit_price) }}</td>
-                  <td class="px-3 py-2">৳{{ formatNumber(item.total_price) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <table class="w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-gray-50">
+            <tr class="text-left text-gray-500">
+              <th class="px-3 py-2">Product</th>
+              <th class="px-3 py-2">Qty</th>
+              <th class="px-3 py-2">Unit Price</th>
+              <th class="px-3 py-2">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in selectedPurchase.items" :key="item.id" class="border-t">
+              <td class="px-3 py-2">{{ item.product?.name }}</td>
+              <td class="px-3 py-2">{{ item.quantity }}</td>
+              <td class="px-3 py-2">৳{{ formatNumber(item.unit_price) }}</td>
+              <td class="px-3 py-2">৳{{ formatNumber(item.total_price) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </AppModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '../../services/api'
+import AppModal from '../../components/ui/AppModal.vue'
 
 const purchases = ref([])
 const suppliers = ref([])

@@ -2,13 +2,9 @@
   <div class="space-y-4">
     <div class="flex justify-between items-center">
       <h2 class="text-xl font-bold text-gray-700">Current Assets (Consumables)</h2>
-      <router-link to="/requisitions"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">
-        + New Requisition
-      </router-link>
+      <router-link to="/requisitions" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">+ New Requisition</router-link>
     </div>
 
-    <!-- Filter -->
     <div class="bg-white rounded-xl shadow-sm p-4 flex gap-3">
       <select v-model="filterDept" @change="fetchRequisitions()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
         <option value="">All Departments</option>
@@ -23,7 +19,6 @@
       </select>
     </div>
 
-    <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
         <p class="text-2xl font-bold text-yellow-600">{{ counts.pending }}</p>
@@ -43,7 +38,6 @@
       </div>
     </div>
 
-    <!-- Requisition Table -->
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
       <div class="px-4 py-3 border-b">
         <h3 class="font-semibold text-gray-700">📋 Consumable Requisitions</h3>
@@ -68,19 +62,14 @@
             <td class="px-4 py-2 text-gray-700">{{ req.department?.name }}</td>
             <td class="px-4 py-2">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {{ req.requested_by?.name?.charAt(0) }}
-                </div>
+                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ req.requested_by?.name?.charAt(0) }}</div>
                 <span class="text-gray-700 text-xs">{{ req.requested_by?.name }}</span>
               </div>
             </td>
             <td class="px-4 py-2">
               <div v-for="item in req.items" :key="item.id" class="text-xs text-gray-600">
                 📦 {{ item.product?.name }}
-                <span class="text-gray-400">
-                  (Req: {{ item.requested_quantity }}
-                  <span v-if="item.fulfilled_quantity > 0"> / Given: {{ item.fulfilled_quantity }}</span>)
-                </span>
+                <span class="text-gray-400">(Req: {{ item.requested_quantity }}<span v-if="item.fulfilled_quantity > 0"> / Given: {{ item.fulfilled_quantity }}</span>)</span>
               </div>
             </td>
             <td class="px-4 py-2">
@@ -112,70 +101,58 @@
     </div>
 
     <!-- View Modal -->
-    <div v-if="showViewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showViewModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-gray-700">Requisition Details</h3>
-          <button @click="showViewModal = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+    <AppModal :show="showViewModal" title="Requisition Details" max-width="max-w-2xl" @close="showViewModal = false">
+      <div v-if="selectedReq" class="space-y-4">
+        <div class="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-gray-500">Reference:</span> <span class="font-medium">{{ selectedReq.reference }}</span></div>
+          <div><span class="text-gray-500">Status:</span> <span class="font-medium capitalize ml-1">{{ selectedReq.status }}</span></div>
+          <div><span class="text-gray-500">Department:</span> <span class="font-medium">{{ selectedReq.department?.name }}</span></div>
+          <div><span class="text-gray-500">Requested By:</span> <span class="font-medium">{{ selectedReq.requested_by?.name }}</span></div>
+          <div><span class="text-gray-500">Request Date:</span> <span class="font-medium">{{ formatDate(selectedReq.request_date) }}</span></div>
+          <div><span class="text-gray-500">Purpose:</span> <span class="font-medium">{{ selectedReq.purpose || '—' }}</span></div>
         </div>
-        <div v-if="selectedReq" class="space-y-4">
-          <div class="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-gray-500">Reference:</span> <span class="font-medium">{{ selectedReq.reference }}</span></div>
-            <div><span class="text-gray-500">Status:</span> <span class="font-medium capitalize ml-1">{{ selectedReq.status }}</span></div>
-            <div><span class="text-gray-500">Department:</span> <span class="font-medium">{{ selectedReq.department?.name }}</span></div>
-            <div><span class="text-gray-500">Requested By:</span> <span class="font-medium">{{ selectedReq.requested_by?.name }}</span></div>
-            <div><span class="text-gray-500">Request Date:</span> <span class="font-medium">{{ formatDate(selectedReq.request_date) }}</span></div>
-            <div><span class="text-gray-500">Required Date:</span> <span class="font-medium">{{ formatDate(selectedReq.required_date) }}</span></div>
-            <div class="col-span-2"><span class="text-gray-500">Purpose:</span> <span class="font-medium">{{ selectedReq.purpose || '—' }}</span></div>
-          </div>
-          <table class="w-full text-sm border rounded-lg overflow-hidden">
-            <thead class="bg-gray-50">
-              <tr class="text-left text-gray-500">
-                <th class="px-3 py-2">Product</th>
-                <th class="px-3 py-2">Requested</th>
-                <th class="px-3 py-2">Approved</th>
-                <th class="px-3 py-2">Fulfilled</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in selectedReq.items" :key="item.id" class="border-t">
-                <td class="px-3 py-2">{{ item.product?.name }}</td>
-                <td class="px-3 py-2">{{ item.requested_quantity }}</td>
-                <td class="px-3 py-2">{{ item.approved_quantity }}</td>
-                <td class="px-3 py-2 font-semibold text-green-600">{{ item.fulfilled_quantity }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table class="w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-gray-50">
+            <tr class="text-left text-gray-500">
+              <th class="px-3 py-2">Product</th>
+              <th class="px-3 py-2">Requested</th>
+              <th class="px-3 py-2">Approved</th>
+              <th class="px-3 py-2">Fulfilled</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in selectedReq.items" :key="item.id" class="border-t">
+              <td class="px-3 py-2">{{ item.product?.name }}</td>
+              <td class="px-3 py-2">{{ item.requested_quantity }}</td>
+              <td class="px-3 py-2">{{ item.approved_quantity }}</td>
+              <td class="px-3 py-2 font-semibold text-green-600">{{ item.fulfilled_quantity }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </AppModal>
 
     <!-- Fulfill Modal -->
-    <div v-if="showFulfillModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showFulfillModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg">
-        <h3 class="text-lg font-bold text-gray-700 mb-4">Assign / Fulfill Requisition</h3>
-        <p class="text-sm text-gray-500 mb-4">{{ selectedReq?.reference }} — {{ selectedReq?.requested_by?.name }}</p>
-        <div class="space-y-3">
-          <div v-for="item in fulfillItems" :key="item.id" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
-            <div class="flex-1">
-              <p class="text-sm font-medium text-gray-700">{{ item.product?.name }}</p>
-              <p class="text-xs text-gray-400">Approved: {{ item.approved_quantity }}</p>
-            </div>
-            <div>
-              <label class="text-xs text-gray-500">Give Qty</label>
-              <<input v-model="item.fulfilled_quantity" type="number" min="0" :max="item.approved_quantity"
-  class="w-20 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 block mt-1" />
-            </div>
+    <AppModal :show="showFulfillModal" title="Assign / Fulfill Requisition" @close="showFulfillModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedReq?.reference }} — {{ selectedReq?.requested_by?.name }}</p>
+      <div class="space-y-3">
+        <div v-for="item in fulfillItems" :key="item.id" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-700">{{ item.product?.name }}</p>
+            <p class="text-xs text-gray-400">Approved: {{ item.approved_quantity }}</p>
           </div>
-          <div class="flex gap-3 pt-2">
-            <button @click="showFulfillModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button @click="submitFulfill" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm transition">✅ Assign & Fulfill</button>
+          <div>
+            <label class="text-xs text-gray-500">Give Qty</label>
+            <input v-model="item.fulfilled_quantity" type="number" min="0" :max="item.approved_quantity"
+              class="w-20 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 block mt-1" />
           </div>
         </div>
+        <div class="flex gap-3 pt-2">
+          <button @click="showFulfillModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="submitFulfill" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">✅ Assign & Fulfill</button>
+        </div>
       </div>
-    </div>
+    </AppModal>
 
   </div>
 </template>
@@ -183,6 +160,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '../../services/api'
+import AppModal from '../../components/ui/AppModal.vue'
 
 const requisitions = ref([])
 const departments = ref([])
@@ -231,19 +209,13 @@ async function viewReq(req) {
 
 function fulfillReq(req) {
   selectedReq.value = req
-  fulfillItems.value = req.items?.map(item => ({
-    ...item,
-    fulfilled_quantity: item.approved_quantity, // default approved quantity
-  })) || []
+  fulfillItems.value = req.items?.map(item => ({ ...item, fulfilled_quantity: item.approved_quantity })) || []
   showFulfillModal.value = true
 }
 
 async function submitFulfill() {
   await api.patch(`/requisitions/${selectedReq.value.id}/fulfill`, {
-    items: fulfillItems.value.map(item => ({
-      id: item.id,
-      fulfilled_quantity: Number(item.fulfilled_quantity),
-    })),
+    items: fulfillItems.value.map(item => ({ id: item.id, fulfilled_quantity: Number(item.fulfilled_quantity) })),
   })
   showFulfillModal.value = false
   fetchRequisitions()

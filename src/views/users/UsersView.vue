@@ -7,9 +7,7 @@
 
     <!-- Tabs -->
     <div class="bg-white rounded-xl shadow-sm p-1 flex gap-1 w-fit">
-      <button @click="activeTab = 'active'" :class="activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">
-        Active Users
-      </button>
+      <button @click="activeTab = 'active'" :class="activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">Active Users</button>
       <button @click="activeTab = 'pending'; fetchPendingUsers()" :class="activeTab === 'pending' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">
         Pending Approval
         <span v-if="pendingUsers.length > 0" class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ pendingUsers.length }}</span>
@@ -22,8 +20,7 @@
         <input v-model="search" @input="fetchUsers" type="text" placeholder="Search by name or email..."
           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
-
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-4">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b">
             <tr class="text-left text-gray-500">
@@ -76,112 +73,102 @@
     </div>
 
     <!-- Pending Users -->
-    <div v-if="activeTab === 'pending'">
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 border-b">
-            <tr class="text-left text-gray-500">
-              <th class="px-4 py-3">#</th>
-              <th class="px-4 py-3">Name</th>
-              <th class="px-4 py-3">Email</th>
-              <th class="px-4 py-3">Requested Role</th>
-              <th class="px-4 py-3">Registered</th>
-              <th class="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="pendingLoading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
-            <tr v-else-if="pendingUsers.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No pending users</td></tr>
-            <tr v-for="user in pendingUsers" :key="user.id" class="border-b hover:bg-gray-50 transition">
-              <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
-                  <span class="font-medium text-gray-700">{{ user.name }}</span>
-                </div>
-              </td>
-              <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
-              <td class="px-4 py-3">
-                <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || 'staff' }}</span>
-              </td>
-              <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(user.created_at) }}</td>
-              <td class="px-4 py-3">
-                <div class="flex gap-2">
-                  <button @click="openApproveModal(user)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
-                  <button @click="rejectUser(user)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div v-if="activeTab === 'pending'" class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr class="text-left text-gray-500">
+            <th class="px-4 py-3">#</th>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Email</th>
+            <th class="px-4 py-3">Requested Role</th>
+            <th class="px-4 py-3">Registered</th>
+            <th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="pendingLoading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="pendingUsers.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No pending users</td></tr>
+          <tr v-for="user in pendingUsers" :key="user.id" class="border-b hover:bg-gray-50 transition">
+            <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
+                <span class="font-medium text-gray-700">{{ user.name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
+            <td class="px-4 py-3">
+              <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || 'staff' }}</span>
+            </td>
+            <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(user.created_at) }}</td>
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                <button @click="openApproveModal(user)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
+                <button @click="rejectUser(user)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="closeModal"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-gray-700 mb-4">{{ editingUser ? 'Edit User' : 'Add User' }}</h3>
-        <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
-        <form @submit.prevent="saveUser" class="space-y-3">
-          <div>
-            <label class="text-xs font-medium text-gray-600">Name *</label>
-            <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Email *</label>
-            <input v-model="form.email" type="email" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Password {{ editingUser ? '(leave blank to keep)' : '*' }}</label>
-            <input v-model="form.password" type="password" :required="!editingUser" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Role</label>
-            <select v-model="form.role" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="">Select Role</option>
-              <option value="super-admin">Super Admin</option>
-              <option value="admin">Admin</option>
-              <option value="fixed-asset-admin">Fixed Asset Admin</option>
-              <option value="consumable-admin">Consumable Admin</option>
-              <option value="staff">Staff</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <input v-model="form.is_active" type="checkbox" id="is_active" />
-            <label for="is_active" class="text-sm text-gray-600">Active</label>
-          </div>
-          <div class="flex gap-3 pt-2">
-            <button type="button" @click="closeModal" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button type="submit" :disabled="saving" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Saving...' : 'Save' }}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <AppModal :show="showModal" :title="editingUser ? 'Edit User' : 'Add User'" @close="closeModal">
+      <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
+      <form @submit.prevent="saveUser" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Name *</label>
+          <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Email *</label>
+          <input v-model="form.email" type="email" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Password {{ editingUser ? '(leave blank to keep)' : '*' }}</label>
+          <input v-model="form.password" type="password" :required="!editingUser" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Role</label>
+          <select v-model="form.role" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Role</option>
+            <option value="super-admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="fixed-asset-admin">Fixed Asset Admin</option>
+            <option value="consumable-admin">Consumable Admin</option>
+            <option value="staff">Staff</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <input v-model="form.is_active" type="checkbox" id="is_active" />
+          <label for="is_active" class="text-sm text-gray-600">Active</label>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="closeModal" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Save' }}</button>
+        </div>
+      </form>
+    </AppModal>
 
     <!-- Approve Modal -->
-    <div v-if="showApproveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black bg-opacity-40" @click="showApproveModal = false"></div>
-      <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-gray-700 mb-1">Approve User</h3>
-        <p class="text-sm text-gray-500 mb-4">{{ selectedUser?.name }} ({{ selectedUser?.email }})</p>
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs font-medium text-gray-600">Assign Role</label>
-            <select v-model="approveRole" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="staff">Staff</option>
-              <option value="fixed-asset-admin">Fixed Asset Admin</option>
-              <option value="consumable-admin">Consumable Admin</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div class="flex gap-3 pt-2">
-            <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button @click="approveUser" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm transition">✅ Approve & Activate</button>
-          </div>
+    <AppModal :show="showApproveModal" title="Approve User" @close="showApproveModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedUser?.name }} ({{ selectedUser?.email }})</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Assign Role</label>
+          <select v-model="approveRole" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="staff">Staff</option>
+            <option value="fixed-asset-admin">Fixed Asset Admin</option>
+            <option value="consumable-admin">Consumable Admin</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="approveUser" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">✅ Approve & Activate</button>
         </div>
       </div>
-    </div>
+    </AppModal>
 
   </div>
 </template>
@@ -189,6 +176,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../services/api'
+import AppModal from '../../components/ui/AppModal.vue'
 
 const users = ref([])
 const pendingUsers = ref([])
