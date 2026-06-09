@@ -54,7 +54,7 @@
     </div>
 
     <!-- New Purchase Modal -->
-    <AppModal :show="showModal" title="New Purchase" max-width="max-w-2xl" @close="showModal = false">
+    <AppModal :show="showModal" title="New Purchase" max-width="max-w-3xl" @close="showModal = false">
       <div v-if="formError" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{{ formError }}</div>
       <form @submit.prevent="savePurchase" class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
@@ -77,32 +77,81 @@
             <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
+
+        <!-- Items -->
         <div>
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm font-medium text-gray-600">Items *</label>
             <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
           </div>
-          <div v-for="(item, index) in form.items" :key="index" class="grid grid-cols-8 gap-2 mb-2 items-center">
-            <div class="col-span-4">
-              <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none">
-                <option value="">Select Product</option>
-                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-              </select>
-            </div>
-            <div class="col-span-2">
-              <input v-model="item.quantity" type="number" min="1" placeholder="Qty" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
-            </div>
-            <div class="col-span-1">
-              <input v-model="item.unit_price" type="number" min="0" placeholder="Price" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
-            </div>
-            <div class="col-span-1 text-center">
-              <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">×</button>
+
+          <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 rounded-xl p-3 mb-3">
+            <div class="grid grid-cols-12 gap-2 items-start">
+
+              <!-- Product Type -->
+              <div class="col-span-3">
+                <label class="text-xs text-gray-500">Type *</label>
+                <select v-model="item.product_type" @change="resetItem(item)" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
+                  <option value="consumable">Consumable</option>
+                  <option value="fixed_asset">Fixed Asset</option>
+                </select>
+              </div>
+
+              <!-- Consumable Product -->
+              <div class="col-span-4" v-if="item.product_type === 'consumable'">
+                <label class="text-xs text-gray-500">Product *</label>
+                <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
+                  <option value="">Select Product</option>
+                  <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
+                </select>
+              </div>
+
+              <!-- Fixed Asset Name + Category -->
+              <div class="col-span-4" v-if="item.product_type === 'fixed_asset'">
+                <label class="text-xs text-gray-500">Asset Name *</label>
+                <input v-model="item.asset_name" required placeholder="e.g. Office Chair"
+                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white" />
+              </div>
+
+              <!-- Asset Category (only for fixed asset) -->
+              <div class="col-span-3" v-if="item.product_type === 'fixed_asset'">
+                <label class="text-xs text-gray-500">Asset Category</label>
+                <select v-model="item.asset_category_id" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
+                  <option value="">Select Category</option>
+                  <option v-for="ac in assetCategories" :key="ac.id" :value="ac.id">{{ ac.name }}</option>
+                </select>
+              </div>
+
+              <!-- Empty space for consumable -->
+              <div class="col-span-3" v-if="item.product_type === 'consumable'"></div>
+
+              <!-- Quantity -->
+              <div class="col-span-1">
+                <label class="text-xs text-gray-500">Qty *</label>
+                <input v-model="item.quantity" type="number" min="1" required
+                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
+              </div>
+
+              <!-- Unit Price -->
+              <div class="col-span-1">
+                <label class="text-xs text-gray-500">Price *</label>
+                <input v-model="item.unit_price" type="number" min="0" required
+                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
+              </div>
+
+              <!-- Remove -->
+              <div class="col-span-1 flex items-end pb-2">
+                <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-xl">×</button>
+              </div>
+
             </div>
           </div>
+
           <div class="text-right text-sm font-semibold text-gray-700 mt-2">
             Total: ৳{{ formatNumber(totalAmount) }}
           </div>
         </div>
+
         <div class="flex gap-3">
           <button type="button" @click="showModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Save' }}</button>
@@ -123,7 +172,8 @@
         <table class="w-full text-sm border rounded-lg overflow-hidden">
           <thead class="bg-gray-50">
             <tr class="text-left text-gray-500">
-              <th class="px-3 py-2">Product</th>
+              <th class="px-3 py-2">Item</th>
+              <th class="px-3 py-2">Type</th>
               <th class="px-3 py-2">Qty</th>
               <th class="px-3 py-2">Unit Price</th>
               <th class="px-3 py-2">Total</th>
@@ -131,7 +181,10 @@
           </thead>
           <tbody>
             <tr v-for="item in selectedPurchase.items" :key="item.id" class="border-t">
-              <td class="px-3 py-2">{{ item.product?.name }}</td>
+              <td class="px-3 py-2">{{ item.asset_name || item.product?.name }}</td>
+              <td class="px-3 py-2">
+                <span :class="item.product_type === 'fixed_asset' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'" class="px-2 py-0.5 rounded text-xs capitalize">{{ item.product_type?.replace('_', ' ') }}</span>
+              </td>
               <td class="px-3 py-2">{{ item.quantity }}</td>
               <td class="px-3 py-2">৳{{ formatNumber(item.unit_price) }}</td>
               <td class="px-3 py-2">৳{{ formatNumber(item.total_price) }}</td>
@@ -152,6 +205,7 @@ const purchases = ref([])
 const suppliers = ref([])
 const warehouses = ref([])
 const products = ref([])
+const assetCategories = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
@@ -162,7 +216,7 @@ const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 
 const form = ref({
   supplier_id: '', warehouse_id: '', note: '',
-  items: [{ product_id: '', quantity: 1, unit_price: 0 }],
+  items: [{ product_type: 'consumable', product_id: '', asset_name: '', asset_category_id: '', quantity: 1, unit_price: 0 }],
 })
 
 const totalAmount = computed(() => {
@@ -185,24 +239,40 @@ async function fetchPurchases(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [s, w, p] = await Promise.all([
+  const [s, w, p, ac] = await Promise.all([
     api.get('/suppliers', { params: { per_page: 100 } }),
     api.get('/warehouses', { params: { per_page: 100 } }),
     api.get('/products', { params: { per_page: 100 } }),
+    api.get('/asset-categories', { params: { per_page: 100 } }),
   ])
   suppliers.value = s.data.data.data
   warehouses.value = w.data.data.data
   products.value = p.data.data.data
+  assetCategories.value = ac.data.data.data
 }
 
 function openModal() {
-  form.value = { supplier_id: '', warehouse_id: '', note: '', items: [{ product_id: '', quantity: 1, unit_price: 0 }] }
+  form.value = {
+    supplier_id: '', warehouse_id: '', note: '',
+    items: [{ product_type: 'consumable', product_id: '', asset_name: '', asset_category_id: '', quantity: 1, unit_price: 0 }],
+  }
   formError.value = null
   showModal.value = true
 }
 
-function addItem() { form.value.items.push({ product_id: '', quantity: 1, unit_price: 0 }) }
-function removeItem(index) { if (form.value.items.length > 1) form.value.items.splice(index, 1) }
+function addItem() {
+  form.value.items.push({ product_type: 'consumable', product_id: '', asset_name: '', asset_category_id: '', quantity: 1, unit_price: 0 })
+}
+
+function removeItem(index) {
+  if (form.value.items.length > 1) form.value.items.splice(index, 1)
+}
+
+function resetItem(item) {
+  item.product_id = ''
+  item.asset_name = ''
+  item.asset_category_id = ''
+}
 
 async function savePurchase() {
   saving.value = true; formError.value = null
@@ -220,9 +290,13 @@ async function viewPurchase(p) {
 }
 
 async function receivePurchase(p) {
-  if (!confirm(`Receive purchase ${p.reference}?`)) return
-  await api.patch(`/purchases/${p.id}/receive`)
-  fetchPurchases()
+  if (!confirm(`Receive purchase ${p.reference}? This will create Fixed Assets or update Stock.`)) return
+  try {
+    await api.patch(`/purchases/${p.id}/receive`)
+    fetchPurchases()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Something went wrong')
+  }
 }
 
 function changePage(page) {

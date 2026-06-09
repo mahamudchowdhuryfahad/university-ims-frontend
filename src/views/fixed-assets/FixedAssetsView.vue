@@ -11,6 +11,7 @@
         class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       <select v-model="filterStatus" @change="fetchAssets" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
         <option value="">All Status</option>
+        <option value="in_store">In Store</option>
         <option value="available">Available</option>
         <option value="assigned">Assigned</option>
         <option value="under_maintenance">Under Maintenance</option>
@@ -23,6 +24,30 @@
       </select>
     </div>
 
+    <!-- Stats Cards -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-purple-600">{{ assetStats.in_store || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">In Store</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-green-600">{{ assetStats.available || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Available</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-blue-600">{{ assetStats.assigned || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Assigned</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-yellow-600">{{ assetStats.under_maintenance || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Maintenance</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-red-500">{{ assetStats.disposed || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Disposed</p>
+  </div>
+</div>
+
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b">
@@ -31,6 +56,7 @@
             <th class="px-4 py-3">Name</th>
             <th class="px-4 py-3">Asset Category</th>
             <th class="px-4 py-3">Department</th>
+            <th class="px-4 py-3">Room</th>
             <th class="px-4 py-3">Employee</th>
             <th class="px-4 py-3">Cost</th>
             <th class="px-4 py-3">Status</th>
@@ -39,25 +65,29 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="9" class="text-center py-8 text-gray-400">Loading...</td></tr>
-          <tr v-else-if="assets.length === 0"><td colspan="9" class="text-center py-8 text-gray-400">No assets found</td></tr>
+          <tr v-if="loading"><td colspan="10" class="text-center py-8 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="assets.length === 0"><td colspan="10" class="text-center py-8 text-gray-400">No assets found</td></tr>
           <tr v-for="asset in assets" :key="asset.id" class="border-b hover:bg-gray-50 transition">
             <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono">{{ asset.asset_tag }}</span></td>
             <td class="px-4 py-3">
               <p class="font-medium text-gray-700">{{ asset.name }}</p>
               <p class="text-xs text-gray-400">{{ asset.model }}</p>
             </td>
-            <td class="px-4 py-3 text-gray-500">{{ asset.asset_category?.name || '—' }}</td>
-            <td class="px-4 py-3 text-gray-500">{{ asset.department?.name || '—' }}</td>
-            <td class="px-4 py-3 text-gray-500">{{ asset.employee?.name || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.asset_category?.name || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.department?.name || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.room ? asset.room.name + ' (' + asset.room.room_number + ')' : '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.employee?.name || '—' }}</td>
             <td class="px-4 py-3 font-medium text-gray-700">৳{{ formatNumber(asset.purchase_cost) }}</td>
             <td class="px-4 py-3">
               <span :class="{
+                'bg-purple-100 text-purple-700': asset.status === 'in_store',
                 'bg-green-100 text-green-700': asset.status === 'available',
                 'bg-blue-100 text-blue-700': asset.status === 'assigned',
                 'bg-yellow-100 text-yellow-700': asset.status === 'under_maintenance',
                 'bg-red-100 text-red-700': asset.status === 'damaged' || asset.status === 'disposed',
-              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">{{ asset.status?.replace('_', ' ') }}</span>
+              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                {{ asset.status?.replace('_', ' ') }}
+              </span>
             </td>
             <td class="px-4 py-3">
               <span :class="{
@@ -65,14 +95,17 @@
                 'bg-yellow-100 text-yellow-700': asset.condition === 'fair',
                 'bg-orange-100 text-orange-700': asset.condition === 'poor',
                 'bg-red-100 text-red-700': asset.condition === 'damaged',
-              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">{{ asset.condition }}</span>
+              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                {{ asset.condition }}
+              </span>
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-1 flex-wrap">
                 <button @click="openModal(asset)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-xs font-medium transition">✏️</button>
-                <button v-if="asset.status === 'available'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Assign</button>
+                <button v-if="asset.status === 'in_store'" @click="openDistributeModal(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📦 Distribute</button>
+                <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Assign</button>
                 <button v-if="asset.status === 'assigned'" @click="returnAsset(asset)" class="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 px-2 py-1 rounded text-xs font-medium transition">↩️ Return</button>
-                <button @click="viewHistory(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📋 History</button>
+                <button @click="viewHistory(asset)" class="bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium transition">📋</button>
                 <button v-if="asset.status !== 'disposed'" @click="openDisposeModal(asset)" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition">🗑️ Dispose</button>
                 <button @click="deleteAsset(asset.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">❌</button>
               </div>
@@ -100,12 +133,20 @@
             <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Dell Laptop, Steel Chair" />
           </div>
           <div>
-            <label class="text-xs font-medium text-gray-600">Serial Number</label>
-            <input v-model="form.serial_number" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="text-xs font-medium text-gray-600">Quantity (for bulk add)</label>
+            <input v-model="form.quantity" type="number" min="1" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-xs text-gray-400 mt-1">Multiple quantity = multiple assets with unique tags</p>
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Model</label>
             <input v-model="form.model" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="col-span-2">
+            <label class="text-xs font-medium text-gray-600">Serial Numbers (one per line)</label>
+            <textarea v-model="serialNumbersText" rows="3"
+              placeholder="CIU-001&#10;CIU-002&#10;CIU-003"
+              class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <p class="text-xs text-gray-400 mt-1">Enter each serial number on a separate line</p>
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Asset Category</label>
@@ -132,7 +173,7 @@
             <label class="text-xs font-medium text-gray-600">Room</label>
             <select v-model="form.room_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
               <option value="">Select Room</option>
-              <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+              <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
             </select>
           </div>
           <div>
@@ -168,8 +209,37 @@
       </form>
     </AppModal>
 
+    <!-- Distribute Modal -->
+    <AppModal :show="showDistributeModal" title="Distribute Asset to Room/Department" @close="showDistributeModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
+      <form @submit.prevent="submitDistribute" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Department *</label>
+          <select v-model="distributeForm.department_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Department</option>
+            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Room</label>
+          <select v-model="distributeForm.room_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Room</option>
+            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Notes</label>
+          <input v-model="distributeForm.notes" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="showDistributeModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Distributing...' : '📦 Distribute' }}</button>
+        </div>
+      </form>
+    </AppModal>
+
     <!-- Assign Modal -->
-    <AppModal :show="showAssignModal" title="Assign Asset" @close="showAssignModal = false">
+    <AppModal :show="showAssignModal" title="Assign Asset to Employee" @close="showAssignModal = false">
       <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
       <form @submit.prevent="assignAsset" class="space-y-3">
         <div>
@@ -288,7 +358,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../../services/api'
 import AppModal from '../../components/ui/AppModal.vue'
 
@@ -302,6 +372,7 @@ const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
 const showAssignModal = ref(false)
+const showDistributeModal = ref(false)
 const showDisposeModal = ref(false)
 const showHistoryModal = ref(false)
 const showConfirm = ref(false)
@@ -311,19 +382,28 @@ const selectedAsset = ref(null)
 const confirmDeleteId = ref(null)
 const formError = ref(null)
 const historyData = ref(null)
+const serialNumbersText = ref('')
 const search = ref('')
 const filterStatus = ref('')
 const filterDept = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
+const assetStats = ref({})
+
+const statusCounts = computed(() => {
+  const counts = {}
+  assets.value.forEach(a => { counts[a.status] = (counts[a.status] || 0) + 1 })
+  return counts
+})
 
 const form = ref({
-  name: '', serial_number: '', model: '',
+  name: '', quantity: 1, serial_number: '', model: '',
   asset_category_id: '', brand_id: '', department_id: '', room_id: '',
   purchase_date: '', purchase_cost: '', warranty_expiry: '',
   condition: 'good', description: '',
 })
 
 const assignForm = ref({ employee_id: '', department_id: '', assigned_date: '', notes: '' })
+const distributeForm = ref({ department_id: '', room_id: '', notes: '' })
 const disposeForm = ref({ disposal_date: new Date().toISOString().split('T')[0], method: 'written_off', disposal_value: 0, reason: '' })
 
 function formatNumber(num) { return Number(num || 0).toLocaleString() }
@@ -352,11 +432,18 @@ async function fetchMasterData() {
   employees.value = e.data.data.data
 }
 
+async function fetchStats() {
+  const res = await api.get('/fixed-assets/stats')
+  assetStats.value = res.data.data
+}
+
 function openModal(asset = null) {
   editingAsset.value = asset
   formError.value = null
+  serialNumbersText.value = asset ? (asset.serial_number || '') : ''
   form.value = asset ? {
-    name: asset.name, serial_number: asset.serial_number || '',
+    name: asset.name, quantity: 1,
+    serial_number: asset.serial_number || '',
     model: asset.model || '', asset_category_id: asset.asset_category_id || '',
     brand_id: asset.brand?.id || '', department_id: asset.department?.id || '',
     room_id: asset.room?.id || '',
@@ -365,7 +452,7 @@ function openModal(asset = null) {
     warranty_expiry: asset.warranty_expiry?.split('T')[0] || '',
     condition: asset.condition || 'good', description: asset.description || '',
   } : {
-    name: '', serial_number: '', model: '', asset_category_id: '',
+    name: '', quantity: 1, serial_number: '', model: '', asset_category_id: '',
     brand_id: '', department_id: '', room_id: '',
     purchase_date: '', purchase_cost: '', warranty_expiry: '',
     condition: 'good', description: '',
@@ -378,8 +465,12 @@ function closeModal() { showModal.value = false; editingAsset.value = null }
 async function saveAsset() {
   saving.value = true; formError.value = null
   try {
-    if (editingAsset.value) { await api.put(`/fixed-assets/${editingAsset.value.id}`, form.value) }
-    else { await api.post('/fixed-assets', form.value) }
+    const serialNumbers = serialNumbersText.value
+      .split('\n').map(s => s.trim()).filter(s => s.length > 0)
+    const payload = { ...form.value, serial_numbers: serialNumbers }
+
+    if (editingAsset.value) { await api.put(`/fixed-assets/${editingAsset.value.id}`, payload) }
+    else { await api.post('/fixed-assets', payload) }
     closeModal(); fetchAssets()
   } catch (err) { formError.value = err.response?.data?.message || 'Something went wrong' }
   finally { saving.value = false }
@@ -396,6 +487,21 @@ async function assignAsset() {
   try {
     await api.post(`/fixed-assets/${selectedAsset.value.id}/assign`, assignForm.value)
     showAssignModal.value = false; fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
+  finally { saving.value = false }
+}
+
+function openDistributeModal(asset) {
+  selectedAsset.value = asset
+  distributeForm.value = { department_id: '', room_id: '', notes: '' }
+  showDistributeModal.value = true
+}
+
+async function submitDistribute() {
+  saving.value = true
+  try {
+    await api.patch(`/fixed-assets/${selectedAsset.value.id}/distribute`, distributeForm.value)
+    showDistributeModal.value = false; fetchAssets()
   } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
   finally { saving.value = false }
 }
@@ -439,5 +545,5 @@ function changePage(page) {
   fetchAssets(page)
 }
 
-onMounted(() => { fetchAssets(); fetchMasterData() })
+onMounted(() => { fetchAssets(); fetchMasterData(); fetchStats() })
 </script>
