@@ -40,6 +40,11 @@ const routes = [
       { path: 'maintenance',      name: 'maintenance',      component: () => import('../views/maintenance/MaintenanceView.vue') },
     ],
   },
+  // 404 - catch all
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/dashboard',
+  },
 ]
 
 const router = createRouter({
@@ -49,13 +54,18 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && auth.isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
+    return
   }
+
+  if ((to.path === '/login' || to.path === '/register') && auth.isAuthenticated) {
+    next('/dashboard')
+    return
+  }
+
+  next()
 })
 
 export default router

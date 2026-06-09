@@ -11,7 +11,7 @@
       <nav class="flex-1 overflow-y-auto py-2">
         <router-link v-for="item in navItems" :key="item.to" :to="item.to"
           class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition"
-          :class="{ 'bg-blue-600 text-white': $route.path.startsWith(item.to) }">
+          :class="{ 'bg-blue-600 text-white': isActive(item.to) }">
           <span>{{ item.icon }}</span>
           <span>{{ item.name }}</span>
         </router-link>
@@ -20,11 +20,11 @@
       <div class="p-4 border-t border-gray-700">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
-            {{ auth.user?.name?.charAt(0) }}
+            {{ auth.user?.name?.charAt(0)?.toUpperCase() }}
           </div>
           <div>
             <p class="text-sm font-medium text-white">{{ auth.user?.name }}</p>
-            <p class="text-xs text-gray-400">{{ auth.user?.roles?.[0] }}</p>
+            <p class="text-xs text-gray-400 capitalize">{{ primaryRole }}</p>
           </div>
         </div>
         <button @click="handleLogout"
@@ -59,30 +59,48 @@ const route  = useRoute()
 const auth   = useAuthStore()
 
 const navItems = [
-  { name: 'Dashboard',        to: '/dashboard',        icon: '📊' },
-  { name: 'Asset Categories', to: '/asset-categories', icon: '🗂️' },
-  { name: 'Fixed Assets',     to: '/fixed-assets',     icon: '🖥️' },
-  { name: 'Consumable Categories', to: '/categories',  icon: '🏷️' },
-  { name: 'Products',         to: '/products',         icon: '📦' },
-  { name: 'Current Assets',   to: '/current-assets',   icon: '📍'  },
-  { name: 'Brands',           to: '/brands',           icon: '🏷️' },
-  { name: 'Warehouses',       to: '/warehouses',       icon: '🏭' },
-  { name: 'Stock',            to: '/stock',            icon: '📋' },
-  { name: 'Suppliers',        to: '/suppliers',        icon: '🚚' },
-  { name: 'Purchases',        to: '/purchases',        icon: '🛒' },
-  { name: 'Reports',          to: '/reports',          icon: '📈' },
-  { name: 'Users',            to: '/users',            icon: '👥' },
-  { name: 'Schools',          to: '/schools',          icon: '🏫' },
-  { name: 'Departments',      to: '/departments',      icon: '🏢' },
-  { name: 'Buildings',        to: '/buildings',        icon: '🏗️' },
-  { name: 'Rooms',            to: '/rooms',            icon: '🚪' },
-  { name: 'Employees',        to: '/employees',        icon: '👨‍💼' },
-  { name: 'Requisitions',     to: '/requisitions',     icon: '📋' },
-  { name: 'Maintenance',      to: '/maintenance',      icon: '🔧' },
+  { name: 'Dashboard',             to: '/dashboard',        icon: '📊' },
+  { name: 'Asset Categories',      to: '/asset-categories', icon: '🗂️' },
+  { name: 'Fixed Assets',          to: '/fixed-assets',     icon: '🖥️' },
+  { name: 'Consumable Categories', to: '/categories',       icon: '🏷️' },
+  { name: 'Products',              to: '/products',         icon: '📦' },
+  { name: 'Current Assets',        to: '/current-assets',   icon: '📍' },
+  { name: 'Brands',                to: '/brands',           icon: '🎨' },
+  { name: 'Warehouses',            to: '/warehouses',       icon: '🏭' },
+  { name: 'Stock',                 to: '/stock',            icon: '📦' },
+  { name: 'Suppliers',             to: '/suppliers',        icon: '🚚' },
+  { name: 'Purchases',             to: '/purchases',        icon: '🛒' },
+  { name: 'Reports',               to: '/reports',          icon: '📈' },
+  { name: 'Users',                 to: '/users',            icon: '👥' },
+  { name: 'Schools',               to: '/schools',          icon: '🏫' },
+  { name: 'Departments',           to: '/departments',      icon: '🏢' },
+  { name: 'Buildings',             to: '/buildings',        icon: '🏗️' },
+  { name: 'Rooms',                 to: '/rooms',            icon: '🚪' },
+  { name: 'Employees',             to: '/employees',        icon: '👨‍💼' },
+  { name: 'Requisitions',          to: '/requisitions',     icon: '📋' },
+  { name: 'Maintenance',           to: '/maintenance',      icon: '🔧' },
 ]
 
+// Fix: exact match for /dashboard to avoid partial matches
+function isActive(to) {
+  if (to === '/dashboard') {
+    return route.path === '/dashboard'
+  }
+  return route.path.startsWith(to)
+}
+
+// Fix: roles can be array or Laravel Collection — safely get first role
+const primaryRole = computed(() => {
+  const roles = auth.user?.roles
+  if (!roles) return ''
+  if (Array.isArray(roles)) return roles[0] ?? ''
+  // Laravel Collection converted to object
+  if (typeof roles === 'object') return Object.values(roles)[0] ?? ''
+  return ''
+})
+
 const currentPageTitle = computed(() => {
-  const item = navItems.find(i => route.path.startsWith(i.to))
+  const item = navItems.find(i => isActive(i.to))
   return item?.name || 'IMS'
 })
 
