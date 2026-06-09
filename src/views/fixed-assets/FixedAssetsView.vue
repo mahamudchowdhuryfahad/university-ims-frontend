@@ -24,8 +24,12 @@
       </select>
     </div>
 
-    <!-- Stats Cards -->
-<div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 md:grid-cols-7 gap-3">
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-gray-700">{{ assetStats.total || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Total</p>
+  </div>
   <div class="bg-white rounded-xl shadow-sm p-3 text-center">
     <p class="text-xl font-bold text-purple-600">{{ assetStats.in_store || 0 }}</p>
     <p class="text-xs text-gray-500 mt-1">In Store</p>
@@ -41,6 +45,10 @@
   <div class="bg-white rounded-xl shadow-sm p-3 text-center">
     <p class="text-xl font-bold text-yellow-600">{{ assetStats.under_maintenance || 0 }}</p>
     <p class="text-xs text-gray-500 mt-1">Maintenance</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+    <p class="text-xl font-bold text-indigo-600">{{ assetStats.total_transfers || 0 }}</p>
+    <p class="text-xs text-gray-500 mt-1">Transfers</p>
   </div>
   <div class="bg-white rounded-xl shadow-sm p-3 text-center">
     <p class="text-xl font-bold text-red-500">{{ assetStats.disposed || 0 }}</p>
@@ -82,6 +90,7 @@
               <span :class="{
                 'bg-purple-100 text-purple-700': asset.status === 'in_store',
                 'bg-green-100 text-green-700': asset.status === 'available',
+                'bg-teal-100 text-teal-700': asset.status === 'in_room',
                 'bg-blue-100 text-blue-700': asset.status === 'assigned',
                 'bg-yellow-100 text-yellow-700': asset.status === 'under_maintenance',
                 'bg-red-100 text-red-700': asset.status === 'damaged' || asset.status === 'disposed',
@@ -105,7 +114,8 @@
                 <button v-if="asset.status === 'in_store'" @click="openDistributeModal(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📦 Distribute</button>
                 <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Assign</button>
                 <button v-if="asset.status === 'assigned'" @click="returnAsset(asset)" class="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 px-2 py-1 rounded text-xs font-medium transition">↩️ Return</button>
-                <button @click="viewHistory(asset)" class="bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium transition">📋</button>
+                <button v-if="asset.status === 'available' || asset.status === 'assigned'" @click="openTransferModal(asset)" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 px-2 py-1 rounded text-xs font-medium transition">🔄 Transfer</button>
+                <button @click="viewHistory(asset)" class="bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium transition">📋 History</button>
                 <button v-if="asset.status !== 'disposed'" @click="openDisposeModal(asset)" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition">🗑️ Dispose</button>
                 <button @click="deleteAsset(asset.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">❌</button>
               </div>
@@ -304,6 +314,43 @@
       </form>
     </AppModal>
 
+    <!-- Transfer Modal -->
+    <AppModal :show="showTransferModal" title="Transfer Asset" @close="showTransferModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
+      <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+        <p class="text-gray-500">Current Location:</p>
+        <p class="font-medium text-gray-700">{{ selectedAsset?.department?.name || '—' }} / {{ selectedAsset?.room ? selectedAsset.room.name + ' (' + selectedAsset.room.room_number + ')' : '—' }}</p>
+      </div>
+      <form @submit.prevent="submitTransfer" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">To Department *</label>
+          <select v-model="transferForm.to_department_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Department</option>
+            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">To Room</label>
+          <select v-model="transferForm.to_room_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="">Select Room</option>
+            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Transfer Date *</label>
+          <input v-model="transferForm.transfer_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Reason</label>
+          <input v-model="transferForm.reason" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="showTransferModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Transferring...' : '🔄 Transfer' }}</button>
+        </div>
+      </form>
+    </AppModal>
+
     <!-- History Modal -->
     <AppModal :show="showHistoryModal" title="Asset History" max-width="max-w-2xl" @close="showHistoryModal = false">
       <div v-if="historyData" class="space-y-4">
@@ -388,6 +435,13 @@ const filterStatus = ref('')
 const filterDept = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const assetStats = ref({})
+const showTransferModal = ref(false)
+
+const transferForm = ref({
+  to_department_id: '', to_room_id: '',
+  transfer_date: new Date().toISOString().split('T')[0],
+  reason: '',
+})
 
 const statusCounts = computed(() => {
   const counts = {}
@@ -528,9 +582,13 @@ async function submitDispose() {
 }
 
 async function viewHistory(asset) {
-  const res = await api.get(`/fixed-assets/${asset.id}/history`)
-  historyData.value = res.data.data
-  showHistoryModal.value = true
+  try {
+    const res = await api.get(`/fixed-assets/${asset.id}/history`)
+    historyData.value = res.data.data
+    showHistoryModal.value = true
+  } catch (err) {
+    alert(err.response?.data?.message || 'Something went wrong')
+  }
 }
 
 function deleteAsset(id) { confirmDeleteId.value = id; showConfirm.value = true }
@@ -538,6 +596,26 @@ function deleteAsset(id) { confirmDeleteId.value = id; showConfirm.value = true 
 async function confirmDelete() {
   await api.delete(`/fixed-assets/${confirmDeleteId.value}`)
   showConfirm.value = false; confirmDeleteId.value = null; fetchAssets()
+}
+
+function openTransferModal(asset) {
+  selectedAsset.value = asset
+  transferForm.value = {
+    to_department_id: '',
+    to_room_id: '',
+    transfer_date: new Date().toISOString().split('T')[0],
+    reason: '',
+  }
+  showTransferModal.value = true
+}
+
+async function submitTransfer() {
+  saving.value = true
+  try {
+    await api.post(`/fixed-assets/${selectedAsset.value.id}/transfer`, transferForm.value)
+    showTransferModal.value = false; fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
+  finally { saving.value = false }
 }
 
 function changePage(page) {
