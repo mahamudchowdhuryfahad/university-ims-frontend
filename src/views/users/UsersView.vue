@@ -98,7 +98,7 @@
             </td>
             <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
             <td class="px-4 py-3">
-              <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{{ getRoleName(user.roles) || 'staff' }}</span>
+              <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{{ getRoleName(user.roles) || 'requester' }}</span>
             </td>
             <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(user.created_at) }}</td>
             <td class="px-4 py-3">
@@ -135,6 +135,7 @@
             <option value="super-admin">Super Admin</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
+            <option value="store-admin">Store Admin</option>
             <option value="requester">Requester</option>
           </select>
         </div>
@@ -157,6 +158,7 @@
           <label class="text-xs font-medium text-gray-600">Assign Role</label>
           <select v-model="approveRole" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
             <option value="requester">Requester</option>
+            <option value="store-admin">Store Admin</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
             <option value="super-admin">Super Admin</option>
@@ -203,7 +205,7 @@ const selectedUser = ref(null)
 const formError = ref(null)
 const search = ref('')
 const activeTab = ref('active')
-const approveRole = ref('staff')
+const approveRole = ref('requester')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const form = ref({ name: '', email: '', password: '', role: '', is_active: true })
 
@@ -270,7 +272,7 @@ async function toggleStatus(user) {
 
 function openApproveModal(user) {
   selectedUser.value = user
-  approveRole.value = getRoleName(user.roles) !== '—' ? getRoleName(user.roles) : 'staff'
+  approveRole.value = getRoleName(user.roles) !== '—' ? getRoleName(user.roles) : 'requester'
   showApproveModal.value = true
 }
 
