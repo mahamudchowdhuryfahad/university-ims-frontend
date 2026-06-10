@@ -63,7 +63,7 @@ const navItems = [
   { name: 'Asset Categories',      to: '/asset-categories', icon: '🗂️' },
   { name: 'Fixed Assets',          to: '/fixed-assets',     icon: '🖥️' },
   { name: 'Consumable Categories', to: '/categories',       icon: '🏷️' },
-  { name: 'Products',              to: '/products',         icon: '📦' },
+  { name: 'Consumable Products',   to: '/products',         icon: '📦' },
   { name: 'Current Assets',        to: '/current-assets',   icon: '📍' },
   { name: 'Brands',                to: '/brands',           icon: '🎨' },
   { name: 'Warehouses',            to: '/warehouses',       icon: '🏭' },

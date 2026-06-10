@@ -37,7 +37,7 @@
             <td class="px-4 py-3">
               <div class="flex gap-2">
                 <button @click="viewPurchase(p)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-3 py-1 rounded-lg text-xs font-medium transition">👁️ View</button>
-                <button v-if="p.status === 'pending'" @click="receivePurchase(p)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Receive</button>
+                <button v-if="p.status === 'pending'" @click="openReceiveConfirm(p)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Receive</button>
               </div>
             </td>
           </tr>
@@ -87,8 +87,6 @@
 
           <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 rounded-xl p-3 mb-3">
             <div class="grid grid-cols-12 gap-2 items-start">
-
-              <!-- Product Type -->
               <div class="col-span-3">
                 <label class="text-xs text-gray-500">Type *</label>
                 <select v-model="item.product_type" @change="resetItem(item)" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
@@ -97,7 +95,6 @@
                 </select>
               </div>
 
-              <!-- Consumable Product -->
               <div class="col-span-4" v-if="item.product_type === 'consumable'">
                 <label class="text-xs text-gray-500">Product *</label>
                 <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
@@ -106,14 +103,12 @@
                 </select>
               </div>
 
-              <!-- Fixed Asset Name + Category -->
               <div class="col-span-4" v-if="item.product_type === 'fixed_asset'">
                 <label class="text-xs text-gray-500">Asset Name *</label>
                 <input v-model="item.asset_name" required placeholder="e.g. Office Chair"
                   class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white" />
               </div>
 
-              <!-- Asset Category (only for fixed asset) -->
               <div class="col-span-3" v-if="item.product_type === 'fixed_asset'">
                 <label class="text-xs text-gray-500">Asset Category</label>
                 <select v-model="item.asset_category_id" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
@@ -122,28 +117,23 @@
                 </select>
               </div>
 
-              <!-- Empty space for consumable -->
               <div class="col-span-3" v-if="item.product_type === 'consumable'"></div>
 
-              <!-- Quantity -->
               <div class="col-span-1">
                 <label class="text-xs text-gray-500">Qty *</label>
                 <input v-model="item.quantity" type="number" min="1" required
                   class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
               </div>
 
-              <!-- Unit Price -->
               <div class="col-span-1">
                 <label class="text-xs text-gray-500">Price *</label>
                 <input v-model="item.unit_price" type="number" min="0" required
                   class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
               </div>
 
-              <!-- Remove -->
               <div class="col-span-1 flex items-end pb-2">
                 <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-xl">×</button>
               </div>
-
             </div>
           </div>
 
@@ -193,6 +183,22 @@
         </table>
       </div>
     </AppModal>
+
+    <!-- Receive Confirm Modal -->
+    <AppModal :show="showReceiveConfirm" title="Receive Purchase" max-width="max-w-sm" @close="showReceiveConfirm = false">
+      <div class="text-center">
+        <div class="text-5xl mb-4">✅</div>
+        <p class="text-sm font-medium text-gray-700 mb-1">Receive "{{ confirmPurchase?.reference }}"?</p>
+        <p class="text-xs text-gray-400 mb-6">This will create Fixed Assets or update Stock accordingly.</p>
+        <div class="flex gap-3">
+          <button @click="showReceiveConfirm = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="confirmReceive" :disabled="saving" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
+            {{ saving ? 'Processing...' : 'Yes, Receive' }}
+          </button>
+        </div>
+      </div>
+    </AppModal>
+
   </div>
 </template>
 
@@ -210,7 +216,9 @@ const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
 const showViewModal = ref(false)
+const showReceiveConfirm = ref(false)
 const selectedPurchase = ref(null)
+const confirmPurchase = ref(null)
 const formError = ref(null)
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 
@@ -239,16 +247,20 @@ async function fetchPurchases(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [s, w, p, ac] = await Promise.all([
-    api.get('/suppliers', { params: { per_page: 100 } }),
-    api.get('/warehouses', { params: { per_page: 100 } }),
-    api.get('/products', { params: { per_page: 100 } }),
-    api.get('/asset-categories', { params: { per_page: 100 } }),
-  ])
-  suppliers.value = s.data.data.data
-  warehouses.value = w.data.data.data
-  products.value = p.data.data.data
-  assetCategories.value = ac.data.data.data
+  try {
+    const [s, w, p, ac] = await Promise.all([
+      api.get('/suppliers', { params: { per_page: 100 } }),
+      api.get('/warehouses', { params: { per_page: 100 } }),
+      api.get('/products', { params: { per_page: 100 } }),
+      api.get('/asset-categories', { params: { per_page: 100 } }),
+    ])
+    suppliers.value = s.data.data.data
+    warehouses.value = w.data.data.data
+    products.value = p.data.data.data
+    assetCategories.value = ac.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openModal() {
@@ -284,19 +296,30 @@ async function savePurchase() {
 }
 
 async function viewPurchase(p) {
-  const res = await api.get(`/purchases/${p.id}`)
-  selectedPurchase.value = res.data.data
-  showViewModal.value = true
+  try {
+    const res = await api.get(`/purchases/${p.id}`)
+    selectedPurchase.value = res.data.data
+    showViewModal.value = true
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not load purchase details')
+  }
 }
 
-async function receivePurchase(p) {
-  if (!confirm(`Receive purchase ${p.reference}? This will create Fixed Assets or update Stock.`)) return
+function openReceiveConfirm(p) {
+  confirmPurchase.value = p
+  showReceiveConfirm.value = true
+}
+
+async function confirmReceive() {
+  saving.value = true
   try {
-    await api.patch(`/purchases/${p.id}/receive`)
+    await api.patch(`/purchases/${confirmPurchase.value.id}/receive`)
+    showReceiveConfirm.value = false
+    confirmPurchase.value = null
     fetchPurchases()
   } catch (err) {
     alert(err.response?.data?.message || 'Something went wrong')
-  }
+  } finally { saving.value = false }
 }
 
 function changePage(page) {

@@ -170,8 +170,14 @@ async function saveSchool() {
 function deleteSchool(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/schools/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchSchools()
+  try {
+    await api.delete(`/schools/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchSchools()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete school')
+  }
 }
 
 function changePage(page) {

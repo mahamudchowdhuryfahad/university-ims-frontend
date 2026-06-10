@@ -35,17 +35,17 @@
           <tbody>
             <tr v-if="loading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
             <tr v-else-if="users.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No users found</td></tr>
-            <tr v-for="user in users" :key="user.id" class="border-b hover:bg-gray-50 transition">
-              <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
+            <tr v-for="(user, index) in users" :key="user.id" class="border-b hover:bg-gray-50 transition">
+              <td class="px-4 py-3 text-gray-400">{{ (pagination.current_page - 1) * 15 + index + 1 }}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
+                  <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0)?.toUpperCase() }}</div>
                   <span class="font-medium text-gray-700">{{ user.name }}</span>
                 </div>
               </td>
               <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
               <td class="px-4 py-3">
-                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || '—' }}</span>
+                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{{ getRoleName(user.roles) }}</span>
               </td>
               <td class="px-4 py-3">
                 <span :class="user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ user.is_active ? 'Active' : 'Inactive' }}</span>
@@ -88,23 +88,23 @@
         <tbody>
           <tr v-if="pendingLoading"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
           <tr v-else-if="pendingUsers.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No pending users</td></tr>
-          <tr v-for="user in pendingUsers" :key="user.id" class="border-b hover:bg-gray-50 transition">
-            <td class="px-4 py-3 text-gray-400">{{ user.id }}</td>
+          <tr v-for="(user, index) in pendingUsers" :key="user.id" class="border-b hover:bg-gray-50 transition">
+            <td class="px-4 py-3 text-gray-400">{{ index + 1 }}</td>
             <td class="px-4 py-3">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0) }}</div>
+                <div class="w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ user.name?.charAt(0)?.toUpperCase() }}</div>
                 <span class="font-medium text-gray-700">{{ user.name }}</span>
               </div>
             </td>
             <td class="px-4 py-3 text-gray-500">{{ user.email }}</td>
             <td class="px-4 py-3">
-              <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ user.roles?.[0]?.name || 'staff' }}</span>
+              <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{{ getRoleName(user.roles) || 'staff' }}</span>
             </td>
             <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(user.created_at) }}</td>
             <td class="px-4 py-3">
               <div class="flex gap-2">
                 <button @click="openApproveModal(user)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
-                <button @click="rejectUser(user)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+                <button @click="openRejectConfirm(user)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
               </div>
             </td>
           </tr>
@@ -133,7 +133,6 @@
           <select v-model="form.role" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
             <option value="">Select Role</option>
             <option value="super-admin">Super Admin</option>
-            <option value="admin">Admin</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
             <option value="staff">Staff</option>
@@ -160,12 +159,25 @@
             <option value="staff">Staff</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
-            <option value="admin">Admin</option>
+            <option value="super-admin">Super Admin</option>
           </select>
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="approveUser" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">✅ Approve & Activate</button>
+          <button @click="approveUser" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : '✅ Approve & Activate' }}</button>
+        </div>
+      </div>
+    </AppModal>
+
+    <!-- Reject Confirm Modal -->
+    <AppModal :show="showRejectConfirm" title="Reject User" max-width="max-w-sm" @close="showRejectConfirm = false">
+      <div class="text-center">
+        <div class="text-5xl mb-4">❌</div>
+        <p class="text-sm font-medium text-gray-700 mb-1">Reject "{{ selectedUser?.name }}"?</p>
+        <p class="text-xs text-gray-400 mb-6">This will permanently delete the user account.</p>
+        <div class="flex gap-3">
+          <button @click="showRejectConfirm = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="rejectUser" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">{{ saving ? 'Rejecting...' : 'Yes, Reject' }}</button>
         </div>
       </div>
     </AppModal>
@@ -185,6 +197,7 @@ const pendingLoading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
 const showApproveModal = ref(false)
+const showRejectConfirm = ref(false)
 const editingUser = ref(null)
 const selectedUser = ref(null)
 const formError = ref(null)
@@ -193,6 +206,15 @@ const activeTab = ref('active')
 const approveRole = ref('staff')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const form = ref({ name: '', email: '', password: '', role: '', is_active: true })
+
+// Fix: roles can be plain string array or object array
+function getRoleName(roles) {
+  if (!roles || roles.length === 0) return '—'
+  const first = roles[0]
+  if (typeof first === 'string') return first
+  if (typeof first === 'object') return first.name ?? '—'
+  return '—'
+}
 
 function formatDate(date) {
   if (!date) return '—'
@@ -219,7 +241,8 @@ async function fetchPendingUsers() {
 function openModal(user = null) {
   editingUser.value = user
   formError.value = null
-  form.value = user ? { name: user.name, email: user.email, password: '', role: user.roles?.[0]?.name || '', is_active: user.is_active }
+  form.value = user
+    ? { name: user.name, email: user.email, password: '', role: getRoleName(user.roles) === '—' ? '' : getRoleName(user.roles), is_active: user.is_active }
     : { name: '', email: '', password: '', role: '', is_active: true }
   showModal.value = true
 }
@@ -237,26 +260,45 @@ async function saveUser() {
 }
 
 async function toggleStatus(user) {
-  await api.patch(`/users/${user.id}/toggle-status`)
-  fetchUsers()
+  try {
+    await api.patch(`/users/${user.id}/toggle-status`)
+    fetchUsers()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not update status')
+  }
 }
 
 function openApproveModal(user) {
   selectedUser.value = user
-  approveRole.value = user.roles?.[0]?.name || 'staff'
+  approveRole.value = getRoleName(user.roles) !== '—' ? getRoleName(user.roles) : 'staff'
   showApproveModal.value = true
 }
 
 async function approveUser() {
-  await api.patch(`/users/${selectedUser.value.id}/approve`, { role: approveRole.value })
-  showApproveModal.value = false
-  fetchPendingUsers()
+  saving.value = true
+  try {
+    await api.patch(`/users/${selectedUser.value.id}/approve`, { role: approveRole.value })
+    showApproveModal.value = false
+    fetchPendingUsers()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not approve user')
+  } finally { saving.value = false }
 }
 
-async function rejectUser(user) {
-  if (!confirm(`Reject and delete ${user.name}?`)) return
-  await api.delete(`/users/${user.id}`)
-  fetchPendingUsers()
+function openRejectConfirm(user) {
+  selectedUser.value = user
+  showRejectConfirm.value = true
+}
+
+async function rejectUser() {
+  saving.value = true
+  try {
+    await api.delete(`/users/${selectedUser.value.id}`)
+    showRejectConfirm.value = false
+    fetchPendingUsers()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not reject user')
+  } finally { saving.value = false }
 }
 
 function changePage(page) {

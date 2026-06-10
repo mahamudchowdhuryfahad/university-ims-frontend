@@ -144,8 +144,14 @@ async function saveBuilding() {
 function deleteBuilding(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/buildings/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchBuildings()
+  try {
+    await api.delete(`/buildings/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchBuildings()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete building')
+  }
 }
 
 function changePage(page) {

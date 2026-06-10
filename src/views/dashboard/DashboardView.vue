@@ -79,7 +79,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="lowStock.length === 0">
+          <tr v-if="loadingStats">
+            <td colspan="4" class="text-center py-6 text-gray-400">Loading...</td>
+          </tr>
+          <tr v-else-if="lowStock.length === 0">
             <td colspan="4" class="text-center py-6 text-gray-400">✅ All stock levels are OK</td>
           </tr>
           <tr v-for="product in lowStock" :key="product.id" class="border-b hover:bg-gray-50">
@@ -102,26 +105,38 @@ import api from '../../services/api'
 
 const statsData = ref({})
 const lowStock = ref([])
+const loadingStats = ref(false)
 
 const stats = computed(() => [
-  { label: 'Total Fixed Assets',    value: statsData.value.total_fixed_assets || 0,    icon: '🖥️' },
-  { label: 'Assigned Assets',       value: statsData.value.assigned_assets || 0,        icon: '👤' },
-  { label: 'Total Products',        value: statsData.value.total_products || 0,         icon: '📦' },
-  { label: 'Pending Requisitions',  value: statsData.value.pending_requisitions || 0,   icon: '📋' },
-  { label: 'Total Schools',         value: statsData.value.total_schools || 0,          icon: '🏫' },
-  { label: 'Departments',           value: statsData.value.total_departments || 0,      icon: '🏢' },
-  { label: 'Employees',             value: statsData.value.total_employees || 0,        icon: '👨‍💼' },
-  { label: 'Under Maintenance',     value: statsData.value.under_maintenance_assets || 0, icon: '🔧' },
+  { label: 'Total Fixed Assets',   value: statsData.value.total_fixed_assets || 0,       icon: '🖥️' },
+  { label: 'Assigned Assets',      value: statsData.value.assigned_assets || 0,           icon: '👤' },
+  { label: 'Total Products',       value: statsData.value.total_products || 0,            icon: '📦' },
+  { label: 'Pending Requisitions', value: statsData.value.pending_requisitions || 0,      icon: '📋' },
+  { label: 'Total Schools',        value: statsData.value.total_schools || 0,             icon: '🏫' },
+  { label: 'Departments',          value: statsData.value.total_departments || 0,         icon: '🏢' },
+  { label: 'Employees',            value: statsData.value.total_employees || 0,           icon: '👨‍💼' },
+  { label: 'Under Maintenance',    value: statsData.value.under_maintenance_assets || 0,  icon: '🔧' },
 ])
 
 async function fetchStats() {
-  const res = await api.get('/dashboard/stats')
-  statsData.value = res.data.data
+  try {
+    const res = await api.get('/dashboard/stats')
+    statsData.value = res.data.data
+  } catch (err) {
+    console.error('Failed to load dashboard stats', err)
+  }
 }
 
 async function fetchLowStock() {
-  const res = await api.get('/dashboard/low-stock')
-  lowStock.value = res.data.data
+  loadingStats.value = true
+  try {
+    const res = await api.get('/dashboard/low-stock')
+    lowStock.value = res.data.data
+  } catch (err) {
+    console.error('Failed to load low stock', err)
+  } finally {
+    loadingStats.value = false
+  }
 }
 
 onMounted(() => {

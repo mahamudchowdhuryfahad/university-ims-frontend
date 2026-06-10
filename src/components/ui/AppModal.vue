@@ -19,10 +19,19 @@
 </template>
 
 <script setup>
-defineProps({
+import { onMounted, onUnmounted } from 'vue'
+
+const props = defineProps({
   show: Boolean,
   title: String,
   maxWidth: { type: String, default: 'max-w-lg' },
 })
-defineEmits(['close'])
+const emit = defineEmits(['close'])
+
+function handleEscape(e) {
+  if (e.key === 'Escape' && props.show) emit('close')
+}
+
+onMounted(() => window.addEventListener('keydown', handleEscape))
+onUnmounted(() => window.removeEventListener('keydown', handleEscape))
 </script>

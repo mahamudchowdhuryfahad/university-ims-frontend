@@ -138,8 +138,14 @@ async function saveBrand() {
 function deleteBrand(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/brands/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchBrands()
+  try {
+    await api.delete(`/brands/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchBrands()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete brand')
+  }
 }
 
 function changePage(page) {

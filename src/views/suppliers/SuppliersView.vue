@@ -158,8 +158,14 @@ async function saveSupplier() {
 function deleteSupplier(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/suppliers/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchSuppliers()
+  try {
+    await api.delete(`/suppliers/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchSuppliers()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete supplier')
+  }
 }
 
 function changePage(page) {

@@ -14,17 +14,18 @@
       </select>
     </div>
 
+    <!-- Counts from API -->
     <div class="grid grid-cols-3 gap-4">
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-yellow-600">{{ counts.pending }}</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ counts.pending || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Pending</p>
       </div>
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-blue-600">{{ counts.in_progress }}</p>
+        <p class="text-2xl font-bold text-blue-600">{{ counts.in_progress || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">In Progress</p>
       </div>
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-green-600">{{ counts.completed }}</p>
+        <p class="text-2xl font-bold text-green-600">{{ counts.completed || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Completed</p>
       </div>
     </div>
@@ -72,7 +73,7 @@
               <div class="flex gap-1">
                 <button @click="openModal(m)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-xs font-medium transition">✏️</button>
                 <button v-if="m.status !== 'completed'" @click="openCompleteModal(m)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">✅ Complete</button>
-                <button @click="deleteMaintenance(m.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">🗑️</button>
+                <button @click="openDeleteConfirm(m.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">🗑️</button>
               </div>
             </td>
           </tr>
@@ -187,7 +188,7 @@
         <p class="text-sm text-gray-500 mb-6">Are you sure? This action cannot be undone.</p>
         <div class="flex gap-3">
           <button @click="showConfirm = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="confirmDelete" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm transition">Yes, Delete</button>
+          <button @click="confirmDelete" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Deleting...' : 'Yes, Delete' }}</button>
         </div>
       </div>
     </AppModal>
@@ -196,7 +197,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import api from '../../services/api'
 import AppModal from '../../components/ui/AppModal.vue'
 
@@ -214,6 +215,7 @@ const confirmDeleteId = ref(null)
 const formError = ref(null)
 const filterStatus = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
+const counts = ref({ pending: 0, in_progress: 0, completed: 0 })
 
 const form = ref({
   fixed_asset_id: '', type: 'repair', status: 'pending',
@@ -225,12 +227,6 @@ const completeForm = ref({
   completion_date: new Date().toISOString().split('T')[0],
   cost: '', asset_condition: 'good', remarks: '',
 })
-
-const counts = computed(() => ({
-  pending: maintenances.value.filter(m => m.status === 'pending').length,
-  in_progress: maintenances.value.filter(m => m.status === 'in_progress').length,
-  completed: maintenances.value.filter(m => m.status === 'completed').length,
-}))
 
 function formatNumber(num) { return Number(num || 0).toLocaleString() }
 function formatDate(date) {
@@ -244,16 +240,38 @@ async function fetchMaintenances(page = 1) {
     const res = await api.get('/maintenances', { params: { page, per_page: 15, status: filterStatus.value } })
     maintenances.value = res.data.data.data
     pagination.value = { current_page: res.data.data.current_page, last_page: res.data.data.last_page, total: res.data.data.total }
+    await fetchCounts()
   } finally { loading.value = false }
 }
 
+async function fetchCounts() {
+  try {
+    const [pending, inProgress, completed] = await Promise.all([
+      api.get('/maintenances', { params: { per_page: 1, status: 'pending' } }),
+      api.get('/maintenances', { params: { per_page: 1, status: 'in_progress' } }),
+      api.get('/maintenances', { params: { per_page: 1, status: 'completed' } }),
+    ])
+    counts.value = {
+      pending: pending.data.data.total,
+      in_progress: inProgress.data.data.total,
+      completed: completed.data.data.total,
+    }
+  } catch (err) {
+    console.error('Failed to load counts', err)
+  }
+}
+
 async function fetchMasterData() {
-  const [a, s] = await Promise.all([
-    api.get('/fixed-assets', { params: { per_page: 100 } }),
-    api.get('/suppliers', { params: { per_page: 100 } }),
-  ])
-  assets.value = a.data.data.data
-  suppliers.value = s.data.data.data
+  try {
+    const [a, s] = await Promise.all([
+      api.get('/fixed-assets', { params: { per_page: 100 } }),
+      api.get('/suppliers', { params: { per_page: 100 } }),
+    ])
+    assets.value = a.data.data.data
+    suppliers.value = s.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openModal(maintenance = null) {
@@ -304,11 +322,18 @@ async function submitComplete() {
   finally { saving.value = false }
 }
 
-function deleteMaintenance(id) { confirmDeleteId.value = id; showConfirm.value = true }
+function openDeleteConfirm(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/maintenances/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchMaintenances()
+  saving.value = true
+  try {
+    await api.delete(`/maintenances/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchMaintenances()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete record')
+  } finally { saving.value = false }
 }
 
 function changePage(page) {

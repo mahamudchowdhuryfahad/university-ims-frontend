@@ -147,9 +147,14 @@ async function fetchDepartments(page = 1) {
 }
 
 async function fetchSchools() {
-  const res = await api.get('/schools', { params: { per_page: 100 } })
-  schools.value = res.data.data.data
+  try {
+    const res = await api.get('/schools', { params: { per_page: 100 } })
+    schools.value = res.data.data.data
+  } catch (err) {
+    console.error('Failed to load schools', err)
+  }
 }
+
 
 function openModal(dept = null) {
   editingDept.value = dept
@@ -174,8 +179,14 @@ async function saveDept() {
 function deleteDept(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/departments/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchDepartments()
+  try {
+    await api.delete(`/departments/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchDepartments()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete department')
+  }
 }
 
 function changePage(page) {

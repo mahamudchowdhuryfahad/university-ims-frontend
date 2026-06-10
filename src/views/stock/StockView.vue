@@ -114,12 +114,16 @@ async function fetchStocks(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [p, w] = await Promise.all([
-    api.get('/products', { params: { per_page: 100 } }),
-    api.get('/warehouses', { params: { per_page: 100 } }),
-  ])
-  products.value = p.data.data.data
-  warehouses.value = w.data.data.data
+  try {
+    const [p, w] = await Promise.all([
+      api.get('/products', { params: { per_page: 100 } }),
+      api.get('/warehouses', { params: { per_page: 100 } }),
+    ])
+    products.value = p.data.data.data
+    warehouses.value = w.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openAdjustModal() {

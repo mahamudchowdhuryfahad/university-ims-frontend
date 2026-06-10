@@ -152,8 +152,14 @@ async function saveWarehouse() {
 function deleteWarehouse(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/warehouses/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchWarehouses()
+  try {
+    await api.delete(`/warehouses/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchWarehouses()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete warehouse')
+  }
 }
 
 function changePage(page) {

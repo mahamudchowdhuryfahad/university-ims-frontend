@@ -161,12 +161,16 @@ async function fetchRooms(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [b, d] = await Promise.all([
-    api.get('/buildings', { params: { per_page: 100 } }),
-    api.get('/departments', { params: { per_page: 100 } }),
-  ])
-  buildings.value = b.data.data.data
-  departments.value = d.data.data.data
+  try {
+    const [b, d] = await Promise.all([
+      api.get('/buildings', { params: { per_page: 100 } }),
+      api.get('/departments', { params: { per_page: 100 } }),
+    ])
+    buildings.value = b.data.data.data
+    departments.value = d.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openModal(room = null) {
@@ -192,8 +196,14 @@ async function saveRoom() {
 function deleteRoom(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/rooms/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchRooms()
+  try {
+    await api.delete(`/rooms/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchRooms()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete room')
+  }
 }
 
 function changePage(page) {

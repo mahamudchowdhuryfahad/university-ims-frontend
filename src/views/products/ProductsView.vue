@@ -173,12 +173,16 @@ async function fetchProducts(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [c, b] = await Promise.all([
-    api.get('/categories', { params: { per_page: 100 } }),
-    api.get('/brands', { params: { per_page: 100 } }),
-  ])
-  categories.value = c.data.data.data
-  brands.value = b.data.data.data
+  try {
+    const [c, b] = await Promise.all([
+      api.get('/categories', { params: { per_page: 100 } }),
+      api.get('/brands', { params: { per_page: 100 } }),
+    ])
+    categories.value = c.data.data.data
+    brands.value = b.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openModal(product = null) {
@@ -204,8 +208,14 @@ async function saveProduct() {
 function deleteProduct(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/products/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchProducts()
+  try {
+    await api.delete(`/products/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchProducts()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete product')
+  }
 }
 
 function changePage(page) {

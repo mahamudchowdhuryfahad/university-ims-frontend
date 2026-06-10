@@ -54,15 +54,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="assets.length === 0"><td colspan="7" class="text-center py-6 text-gray-400">No data</td></tr>
+          <tr v-if="loadingAssets"><td colspan="7" class="text-center py-6 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="assets.length === 0"><td colspan="7" class="text-center py-6 text-gray-400">No data</td></tr>
           <tr v-for="asset in assets" :key="asset.id" class="border-b hover:bg-gray-50">
             <td class="px-4 py-2 font-mono text-xs text-gray-600">{{ asset.asset_tag }}</td>
             <td class="px-4 py-2 font-medium text-gray-700">{{ asset.name }}</td>
-            <td class="px-4 py-2 text-gray-500">{{ asset.category?.name || '—' }}</td>
+            <td class="px-4 py-2 text-gray-500">{{ asset.assetCategory?.name || '—' }}</td>
             <td class="px-4 py-2 text-gray-500">{{ asset.department?.name || '—' }}</td>
             <td class="px-4 py-2 text-gray-700">৳{{ formatNumber(asset.purchase_cost) }}</td>
             <td class="px-4 py-2">
               <span :class="{
+                'bg-purple-100 text-purple-700': asset.status === 'in_store',
                 'bg-green-100 text-green-700': asset.status === 'available',
                 'bg-blue-100 text-blue-700': asset.status === 'assigned',
                 'bg-red-100 text-red-700': asset.status === 'disposed',
@@ -73,6 +75,7 @@
               <span :class="{
                 'bg-green-100 text-green-700': asset.condition === 'good',
                 'bg-yellow-100 text-yellow-700': asset.condition === 'fair',
+                'bg-orange-100 text-orange-700': asset.condition === 'poor',
                 'bg-red-100 text-red-700': asset.condition === 'damaged',
               }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">{{ asset.condition }}</span>
             </td>
@@ -97,7 +100,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="stockReport.length === 0"><td colspan="4" class="text-center py-6 text-gray-400">No data</td></tr>
+          <tr v-if="loadingStock"><td colspan="4" class="text-center py-6 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="stockReport.length === 0"><td colspan="4" class="text-center py-6 text-gray-400">No data</td></tr>
           <tr v-for="stock in stockReport" :key="stock.id" class="border-b hover:bg-gray-50">
             <td class="px-4 py-2 font-medium text-gray-700">{{ stock.product?.name }}</td>
             <td class="px-4 py-2 text-gray-500">{{ stock.warehouse?.name }}</td>
@@ -131,7 +135,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="requisitions.length === 0"><td colspan="5" class="text-center py-6 text-gray-400">No data</td></tr>
+          <tr v-if="loadingReq"><td colspan="5" class="text-center py-6 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="requisitions.length === 0"><td colspan="5" class="text-center py-6 text-gray-400">No data</td></tr>
           <tr v-for="req in requisitions" :key="req.id" class="border-b hover:bg-gray-50">
             <td class="px-4 py-2 font-medium text-blue-600">{{ req.reference }}</td>
             <td class="px-4 py-2 text-gray-700">{{ req.department?.name }}</td>
@@ -141,7 +146,7 @@
             <td class="px-4 py-2">
               <span :class="{
                 'bg-yellow-100 text-yellow-700': req.status === 'pending',
-                'bg-green-100 text-green-700': req.status === 'fulfilled',
+                'bg-green-100 text-green-700': req.status === 'fulfilled' || req.status === 'approved',
                 'bg-red-100 text-red-700': req.status === 'rejected',
               }" class="px-2 py-0.5 rounded-full text-xs capitalize">{{ req.status }}</span>
             </td>
@@ -164,6 +169,9 @@ const requisitions = ref([])
 const summary = ref({})
 const from = ref('')
 const to = ref('')
+const loadingAssets = ref(false)
+const loadingStock = ref(false)
+const loadingReq = ref(false)
 
 function formatNumber(num) { return Number(num || 0).toLocaleString() }
 function formatDate(date) {
@@ -172,25 +180,37 @@ function formatDate(date) {
 }
 
 async function fetchAll() {
-  const params = { from: from.value, to: to.value, per_page: 100 }
+  loadingAssets.value = true
+  loadingStock.value = true
+  loadingReq.value = true
 
-  const [a, s, r, dash] = await Promise.all([
-    api.get('/fixed-assets', { params: { per_page: 100 } }),
-    api.get('/reports/stock', { params }),
-    api.get('/requisitions', { params: { per_page: 100 } }),
-    api.get('/dashboard/stats'),
-  ])
+  try {
+    const params = { from: from.value, to: to.value, per_page: 100 }
 
-  assets.value = a.data.data.data
-  stockReport.value = s.data.data.data
-  requisitions.value = r.data.data.data
+    const [a, s, r, dash] = await Promise.all([
+      api.get('/fixed-assets', { params: { per_page: 100 } }),
+      api.get('/reports/stock', { params }),
+      api.get('/requisitions', { params: { per_page: 100 } }),
+      api.get('/dashboard/stats'),
+    ])
 
-  const stats = dash.data.data
-  summary.value = {
-    total_assets: stats.total_fixed_assets,
-    assigned_assets: stats.assigned_assets,
-    disposed_assets: assets.value.filter(a => a.status === 'disposed').length,
-    pending_requisitions: stats.pending_requisitions,
+    assets.value = a.data.data.data
+    stockReport.value = s.data.data.data
+    requisitions.value = r.data.data.data
+
+    const stats = dash.data.data
+    summary.value = {
+      total_assets: stats.total_fixed_assets,
+      assigned_assets: stats.assigned_assets,
+      disposed_assets: assets.value.filter(a => a.status === 'disposed').length,
+      pending_requisitions: stats.pending_requisitions,
+    }
+  } catch (err) {
+    console.error('Failed to load reports', err)
+  } finally {
+    loadingAssets.value = false
+    loadingStock.value = false
+    loadingReq.value = false
   }
 }
 

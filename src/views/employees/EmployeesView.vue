@@ -160,8 +160,12 @@ async function fetchEmployees(page = 1) {
 }
 
 async function fetchDepartments() {
-  const res = await api.get('/departments', { params: { per_page: 100 } })
-  departments.value = res.data.data.data
+  try {
+    const res = await api.get('/departments', { params: { per_page: 100 } })
+    departments.value = res.data.data.data
+  } catch (err) {
+    console.error('Failed to load departments', err)
+  }
 }
 
 function openModal(emp = null) {
@@ -187,8 +191,14 @@ async function saveEmployee() {
 function deleteEmployee(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/employees/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchEmployees()
+  try {
+    await api.delete(`/employees/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchEmployees()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete employee')
+  }
 }
 
 function changePage(page) {

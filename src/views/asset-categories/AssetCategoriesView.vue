@@ -147,8 +147,14 @@ async function saveCategory() {
 function deleteCategory(id) { confirmDeleteId.value = id; showConfirm.value = true }
 
 async function confirmDelete() {
-  await api.delete(`/asset-categories/${confirmDeleteId.value}`)
-  showConfirm.value = false; confirmDeleteId.value = null; fetchCategories()
+  try {
+    await api.delete(`/asset-categories/${confirmDeleteId.value}`)
+    showConfirm.value = false
+    confirmDeleteId.value = null
+    fetchCategories()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not delete category')
+  }
 }
 
 function changePage(page) {

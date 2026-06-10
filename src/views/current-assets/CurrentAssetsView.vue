@@ -21,19 +21,19 @@
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-yellow-600">{{ counts.pending }}</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ counts.pending || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Pending</p>
       </div>
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-blue-600">{{ counts.approved }}</p>
+        <p class="text-2xl font-bold text-blue-600">{{ counts.approved || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Approved</p>
       </div>
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-green-600">{{ counts.fulfilled }}</p>
+        <p class="text-2xl font-bold text-green-600">{{ counts.fulfilled || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Fulfilled</p>
       </div>
       <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-        <p class="text-2xl font-bold text-red-500">{{ counts.rejected }}</p>
+        <p class="text-2xl font-bold text-red-500">{{ counts.rejected || 0 }}</p>
         <p class="text-xs text-gray-500 mt-1">Rejected</p>
       </div>
     </div>
@@ -62,7 +62,7 @@
             <td class="px-4 py-2 text-gray-700">{{ req.department?.name }}</td>
             <td class="px-4 py-2">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ req.requested_by?.name?.charAt(0) }}</div>
+                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">{{ req.requested_by?.name?.charAt(0)?.toUpperCase() }}</div>
                 <span class="text-gray-700 text-xs">{{ req.requested_by?.name }}</span>
               </div>
             </td>
@@ -149,7 +149,7 @@
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showFulfillModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="submitFulfill" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">✅ Assign & Fulfill</button>
+          <button @click="submitFulfill" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Processing...' : '✅ Assign & Fulfill' }}</button>
         </div>
       </div>
     </AppModal>
@@ -158,13 +158,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import api from '../../services/api'
 import AppModal from '../../components/ui/AppModal.vue'
 
 const requisitions = ref([])
 const departments = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const filterDept = ref('')
 const filterStatus = ref('')
 const showViewModal = ref(false)
@@ -172,13 +173,7 @@ const showFulfillModal = ref(false)
 const selectedReq = ref(null)
 const fulfillItems = ref([])
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
-
-const counts = computed(() => ({
-  pending: requisitions.value.filter(r => r.status === 'pending').length,
-  approved: requisitions.value.filter(r => r.status === 'approved').length,
-  fulfilled: requisitions.value.filter(r => r.status === 'fulfilled').length,
-  rejected: requisitions.value.filter(r => r.status === 'rejected').length,
-}))
+const counts = ref({ pending: 0, approved: 0, fulfilled: 0, rejected: 0 })
 
 function formatDate(date) {
   if (!date) return '—'
@@ -193,18 +188,46 @@ async function fetchRequisitions(page = 1) {
     })
     requisitions.value = res.data.data.data
     pagination.value = { current_page: res.data.data.current_page, last_page: res.data.data.last_page, total: res.data.data.total }
+    await fetchCounts()
   } finally { loading.value = false }
 }
 
+async function fetchCounts() {
+  try {
+    const [pending, approved, fulfilled, rejected] = await Promise.all([
+      api.get('/requisitions', { params: { per_page: 1, type: 'consumable', status: 'pending' } }),
+      api.get('/requisitions', { params: { per_page: 1, type: 'consumable', status: 'approved' } }),
+      api.get('/requisitions', { params: { per_page: 1, type: 'consumable', status: 'fulfilled' } }),
+      api.get('/requisitions', { params: { per_page: 1, type: 'consumable', status: 'rejected' } }),
+    ])
+    counts.value = {
+      pending: pending.data.data.total,
+      approved: approved.data.data.total,
+      fulfilled: fulfilled.data.data.total,
+      rejected: rejected.data.data.total,
+    }
+  } catch (err) {
+    console.error('Failed to load counts', err)
+  }
+}
+
 async function fetchDepartments() {
-  const res = await api.get('/departments', { params: { per_page: 100 } })
-  departments.value = res.data.data.data
+  try {
+    const res = await api.get('/departments', { params: { per_page: 100 } })
+    departments.value = res.data.data.data
+  } catch (err) {
+    console.error('Failed to load departments', err)
+  }
 }
 
 async function viewReq(req) {
-  const res = await api.get(`/requisitions/${req.id}`)
-  selectedReq.value = res.data.data
-  showViewModal.value = true
+  try {
+    const res = await api.get(`/requisitions/${req.id}`)
+    selectedReq.value = res.data.data
+    showViewModal.value = true
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not load requisition details')
+  }
 }
 
 function fulfillReq(req) {
@@ -214,11 +237,16 @@ function fulfillReq(req) {
 }
 
 async function submitFulfill() {
-  await api.patch(`/requisitions/${selectedReq.value.id}/fulfill`, {
-    items: fulfillItems.value.map(item => ({ id: item.id, fulfilled_quantity: Number(item.fulfilled_quantity) })),
-  })
-  showFulfillModal.value = false
-  fetchRequisitions()
+  saving.value = true
+  try {
+    await api.patch(`/requisitions/${selectedReq.value.id}/fulfill`, {
+      items: fulfillItems.value.map(item => ({ id: item.id, fulfilled_quantity: Number(item.fulfilled_quantity) })),
+    })
+    showFulfillModal.value = false
+    fetchRequisitions()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not fulfill requisition')
+  } finally { saving.value = false }
 }
 
 function changePage(page) {

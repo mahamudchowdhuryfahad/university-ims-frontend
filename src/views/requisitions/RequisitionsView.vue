@@ -55,7 +55,7 @@
               <div class="flex gap-2">
                 <button @click="viewRequisition(req)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-3 py-1 rounded-lg text-xs font-medium transition">👁️ View</button>
                 <button v-if="req.status === 'pending'" @click="openApproveModal(req)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
-                <button v-if="req.status === 'pending'" @click="rejectRequisition(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+                <button v-if="req.status === 'pending'" @click="openRejectModal(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
               </div>
             </td>
           </tr>
@@ -177,7 +177,23 @@
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="approveRequisition" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">Approve</button>
+          <button @click="approveRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : 'Approve' }}</button>
+        </div>
+      </div>
+    </AppModal>
+
+    <!-- Reject Modal -->
+    <AppModal :show="showRejectModal" title="Reject Requisition" max-width="max-w-sm" @close="showRejectModal = false">
+      <div class="space-y-3">
+        <p class="text-sm text-gray-500">{{ selectedReq?.reference }}</p>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Rejection Reason *</label>
+          <textarea v-model="rejectRemarks" rows="3" required placeholder="State the reason for rejection..."
+            class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button @click="showRejectModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="rejectRequisition" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">{{ saving ? 'Rejecting...' : '❌ Reject' }}</button>
         </div>
       </div>
     </AppModal>
@@ -198,12 +214,14 @@ const saving = ref(false)
 const showModal = ref(false)
 const showViewModal = ref(false)
 const showApproveModal = ref(false)
+const showRejectModal = ref(false)
 const selectedReq = ref(null)
 const formError = ref(null)
 const filterStatus = ref('')
 const filterType = ref('')
 const approveItems = ref([])
 const approveRemarks = ref('')
+const rejectRemarks = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 
 const form = ref({
@@ -228,12 +246,16 @@ async function fetchRequisitions(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [d, p] = await Promise.all([
-    api.get('/departments', { params: { per_page: 100 } }),
-    api.get('/products', { params: { per_page: 100 } }),
-  ])
-  departments.value = d.data.data.data
-  products.value = p.data.data.data
+  try {
+    const [d, p] = await Promise.all([
+      api.get('/departments', { params: { per_page: 100 } }),
+      api.get('/products', { params: { per_page: 100 } }),
+    ])
+    departments.value = d.data.data.data
+    products.value = p.data.data.data
+  } catch (err) {
+    console.error('Failed to load master data', err)
+  }
 }
 
 function openModal() {
@@ -260,9 +282,13 @@ async function saveRequisition() {
 }
 
 async function viewRequisition(req) {
-  const res = await api.get(`/requisitions/${req.id}`)
-  selectedReq.value = res.data.data
-  showViewModal.value = true
+  try {
+    const res = await api.get(`/requisitions/${req.id}`)
+    selectedReq.value = res.data.data
+    showViewModal.value = true
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not load requisition details')
+  }
 }
 
 function openApproveModal(req) {
@@ -273,18 +299,38 @@ function openApproveModal(req) {
 }
 
 async function approveRequisition() {
-  await api.patch(`/requisitions/${selectedReq.value.id}/approve`, {
-    remarks: approveRemarks.value,
-    items: approveItems.value.map(item => ({ id: item.id, approved_quantity: Number(item.approved_quantity) })),
-  })
-  showApproveModal.value = false; fetchRequisitions()
+  saving.value = true
+  try {
+    await api.patch(`/requisitions/${selectedReq.value.id}/approve`, {
+      remarks: approveRemarks.value,
+      items: approveItems.value.map(item => ({ id: item.id, approved_quantity: Number(item.approved_quantity) })),
+    })
+    showApproveModal.value = false
+    fetchRequisitions()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not approve requisition')
+  } finally { saving.value = false }
 }
 
-async function rejectRequisition(req) {
-  const remarks = prompt('Rejection reason:')
-  if (!remarks) return
-  await api.patch(`/requisitions/${req.id}/reject`, { remarks })
-  fetchRequisitions()
+function openRejectModal(req) {
+  selectedReq.value = req
+  rejectRemarks.value = ''
+  showRejectModal.value = true
+}
+
+async function rejectRequisition() {
+  if (!rejectRemarks.value.trim()) {
+    alert('Please provide a rejection reason')
+    return
+  }
+  saving.value = true
+  try {
+    await api.patch(`/requisitions/${selectedReq.value.id}/reject`, { remarks: rejectRemarks.value })
+    showRejectModal.value = false
+    fetchRequisitions()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not reject requisition')
+  } finally { saving.value = false }
 }
 
 function changePage(page) {
