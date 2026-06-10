@@ -135,7 +135,7 @@
             <option value="super-admin">Super Admin</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
-            <option value="staff">Staff</option>
+            <option value="requester">Requester</option>
           </select>
         </div>
         <div class="flex items-center gap-2">
@@ -156,7 +156,7 @@
         <div>
           <label class="text-xs font-medium text-gray-600">Assign Role</label>
           <select v-model="approveRole" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-            <option value="staff">Staff</option>
+            <option value="requester">Requester</option>
             <option value="fixed-asset-admin">Fixed Asset Admin</option>
             <option value="consumable-admin">Consumable Admin</option>
             <option value="super-admin">Super Admin</option>
