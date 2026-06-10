@@ -216,7 +216,8 @@ async function fetchDepartments() {
     const res = await api.get('/departments', { params: { per_page: 100 } })
     departments.value = res.data.data.data
   } catch (err) {
-    console.error('Failed to load departments', err)
+    // 403 means departments are not accessible for this role, so we can ignore it and just show empty list
+    console.warn('Departments not accessible for this role')
   }
 }
 
