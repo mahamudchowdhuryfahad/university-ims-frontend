@@ -47,15 +47,16 @@
             <td class="px-4 py-3">
               <span :class="{
                 'bg-yellow-100 text-yellow-700': req.status === 'pending',
-                'bg-green-100 text-green-700': req.status === 'approved' || req.status === 'fulfilled',
+                'bg-blue-100 text-blue-700': req.status === 'approved',
+                'bg-green-100 text-green-700': req.status === 'fulfilled',
                 'bg-red-100 text-red-700': req.status === 'rejected',
               }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">{{ req.status }}</span>
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-2">
                 <button @click="viewRequisition(req)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-3 py-1 rounded-lg text-xs font-medium transition">👁️ View</button>
-                <button v-if="req.status === 'pending'" @click="openApproveModal(req)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
-                <button v-if="req.status === 'pending'" @click="openRejectModal(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+                <button v-if="req.status === 'pending' && canApprove" @click="openApproveModal(req)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
+                <button v-if="req.status === 'pending' && canApprove" @click="openRejectModal(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
               </div>
             </td>
           </tr>
@@ -141,6 +142,10 @@
           <div><span class="text-gray-500">Request Date:</span> <span class="font-medium">{{ formatDate(selectedReq.request_date) }}</span></div>
           <div><span class="text-gray-500">Required Date:</span> <span class="font-medium">{{ formatDate(selectedReq.required_date) }}</span></div>
           <div class="col-span-2"><span class="text-gray-500">Purpose:</span> <span class="font-medium">{{ selectedReq.purpose || '—' }}</span></div>
+          <div v-if="selectedReq.remarks" class="col-span-2">
+            <span class="text-gray-500">Remarks:</span>
+            <span class="font-medium text-red-600 ml-1">{{ selectedReq.remarks }}</span>
+          </div>
         </div>
         <table class="w-full text-sm border rounded-lg overflow-hidden">
           <thead class="bg-gray-50">
@@ -155,8 +160,8 @@
             <tr v-for="item in selectedReq.items" :key="item.id" class="border-t">
               <td class="px-3 py-2">{{ item.product?.name }}</td>
               <td class="px-3 py-2">{{ item.requested_quantity }}</td>
-              <td class="px-3 py-2">{{ item.approved_quantity }}</td>
-              <td class="px-3 py-2">{{ item.fulfilled_quantity }}</td>
+              <td class="px-3 py-2">{{ item.approved_quantity ?? '—' }}</td>
+              <td class="px-3 py-2 font-semibold text-green-600">{{ item.fulfilled_quantity ?? '—' }}</td>
             </tr>
           </tbody>
         </table>
@@ -166,7 +171,7 @@
     <!-- Approve Modal -->
     <AppModal :show="showApproveModal" title="Approve Requisition" @close="showApproveModal = false">
       <div class="space-y-3">
-        <div v-for="item in approveItems" :key="item.id" class="flex items-center gap-3">
+        <div v-for="item in approveItems" :key="item.id" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
           <span class="flex-1 text-sm text-gray-700">{{ item.product?.name }}</span>
           <span class="text-xs text-gray-400">Req: {{ item.requested_quantity }}</span>
           <input v-model="item.approved_quantity" type="number" min="0" :max="item.requested_quantity" class="w-20 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -177,7 +182,7 @@
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="approveRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : 'Approve' }}</button>
+          <button @click="approveRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : '✅ Approve' }}</button>
         </div>
       </div>
     </AppModal>
@@ -202,9 +207,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../../services/api'
 import AppModal from '../../components/ui/AppModal.vue'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
+
+// Role helpers
+const userRole = computed(() => {
+  const roles = auth.user?.roles
+  if (!roles) return ''
+  const first = Array.isArray(roles) ? roles[0] : Object.values(roles)[0]
+  return typeof first === 'string' ? first : first?.name ?? ''
+})
+const canApprove = computed(() => ['super-admin', 'fixed-asset-admin', 'consumable-admin'].includes(userRole.value))
+const isRequester = computed(() => userRole.value === 'requester')
 
 const requisitions = ref([])
 const departments = ref([])
@@ -247,6 +265,7 @@ async function fetchRequisitions(page = 1) {
 
 async function fetchMasterData() {
   try {
+    if (isRequester.value) return // requester এর permission নেই
     const [d, p] = await Promise.all([
       api.get('/departments', { params: { per_page: 100 } }),
       api.get('/products', { params: { per_page: 100 } }),
