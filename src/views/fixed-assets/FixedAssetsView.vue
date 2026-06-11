@@ -6,131 +6,213 @@
       <button @click.stop="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">+ Add Asset</button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm p-4 flex gap-3">
-      <input v-model="search" @input="fetchAssets" type="text" placeholder="Search by name, tag, serial..."
-        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <select v-model="filterStatus" @change="fetchAssets" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
-        <option value="">All Status</option>
-        <option value="in_store">In Store</option>
-        <option value="available">Available</option>
-        <option value="assigned">Assigned</option>
-        <option value="under_maintenance">Under Maintenance</option>
-        <option value="damaged">Damaged</option>
-        <option value="disposed">Disposed</option>
-      </select>
-      <select v-model="filterDept" @change="fetchAssets" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
-        <option value="">All Departments</option>
-        <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-      </select>
+    <!-- Tabs — Pending Approvals tab only for fixed-asset-admin & super-admin -->
+    <div class="bg-white rounded-xl shadow-sm p-1 flex gap-1 w-fit">
+      <button @click="activeTab = 'assets'" :class="activeTab === 'assets' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">All Assets</button>
+      <button v-if="canApprove" @click="activeTab = 'approvals'; fetchApprovals()" :class="activeTab === 'approvals' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-4 py-2 rounded-lg text-sm font-medium transition">
+        Pending Approvals
+        <span v-if="pendingApprovalsCount > 0" class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ pendingApprovalsCount }}</span>
+      </button>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-7 gap-3">
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-gray-700">{{ assetStats.total || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Total</p>
+    <!-- Assets Tab -->
+    <div v-if="activeTab === 'assets'">
+      <div class="bg-white rounded-xl shadow-sm p-4 flex gap-3">
+        <input v-model="search" @input="fetchAssets" type="text" placeholder="Search by name, tag, serial..."
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <select v-model="filterStatus" @change="fetchAssets" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+          <option value="">All Status</option>
+          <option value="in_store">In Store</option>
+          <option value="available">Available</option>
+          <option value="assigned">Assigned</option>
+          <option value="pending_approval">Pending Approval</option>
+          <option value="under_maintenance">Under Maintenance</option>
+          <option value="disposed">Disposed</option>
+        </select>
+        <select v-model="filterDept" @change="fetchAssets" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+          <option value="">All Departments</option>
+          <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+        </select>
       </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-purple-600">{{ assetStats.in_store || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">In Store</p>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mt-4">
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-gray-700">{{ assetStats.total || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Total</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-purple-600">{{ assetStats.in_store || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">In Store</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-green-600">{{ assetStats.available || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Available</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-blue-600">{{ assetStats.assigned || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Assigned</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-orange-500">{{ assetStats.pending_approval || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Pending</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-yellow-600">{{ assetStats.under_maintenance || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Maintenance</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-3 text-center">
+          <p class="text-xl font-bold text-red-500">{{ assetStats.disposed || 0 }}</p>
+          <p class="text-xs text-gray-500 mt-1">Disposed</p>
+        </div>
       </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-green-600">{{ assetStats.available || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Available</p>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-blue-600">{{ assetStats.assigned || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Assigned</p>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-yellow-600">{{ assetStats.under_maintenance || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Maintenance</p>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-indigo-600">{{ assetStats.total_transfers || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Transfers</p>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm p-3 text-center">
-        <p class="text-xl font-bold text-red-500">{{ assetStats.disposed || 0 }}</p>
-        <p class="text-xs text-gray-500 mt-1">Disposed</p>
+
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-4">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr class="text-left text-gray-500">
+              <th class="px-4 py-3">Asset Tag</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Category</th>
+              <th class="px-4 py-3">Department</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Condition</th>
+              <th class="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading"><td colspan="7" class="text-center py-8 text-gray-400">Loading...</td></tr>
+            <tr v-else-if="assets.length === 0"><td colspan="7" class="text-center py-8 text-gray-400">No assets found</td></tr>
+            <tr v-for="asset in assets" :key="asset.id" class="border-b hover:bg-gray-50 transition">
+              <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono">{{ asset.asset_tag }}</span></td>
+              <td class="px-4 py-3">
+                <p class="font-medium text-gray-700">{{ asset.name }}</p>
+                <p class="text-xs text-gray-400">{{ asset.model }}</p>
+              </td>
+              <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.assetCategory?.name || asset.asset_category?.name || '—' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.department?.name || '—' }}</td>
+              <td class="px-4 py-3">
+                <span :class="{
+                  'bg-purple-100 text-purple-700': asset.status === 'in_store',
+                  'bg-green-100 text-green-700': asset.status === 'available',
+                  'bg-blue-100 text-blue-700': asset.status === 'assigned',
+                  'bg-orange-100 text-orange-700': asset.status === 'pending_approval',
+                  'bg-yellow-100 text-yellow-700': asset.status === 'under_maintenance',
+                  'bg-red-100 text-red-700': asset.status === 'disposed',
+                }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                  {{ asset.status?.replace(/_/g, ' ') }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <span :class="{
+                  'bg-green-100 text-green-700': asset.condition === 'good',
+                  'bg-yellow-100 text-yellow-700': asset.condition === 'fair',
+                  'bg-orange-100 text-orange-700': asset.condition === 'poor',
+                  'bg-red-100 text-red-700': asset.condition === 'damaged',
+                }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                  {{ asset.condition }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1 flex-wrap">
+                  <button @click="openModal(asset)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-xs font-medium transition">✏️</button>
+
+                  <!-- fixed-asset-admin / super-admin: direct actions -->
+                  <template v-if="canApprove">
+                    <button v-if="asset.status === 'in_store'" @click="openDistributeModal(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📦 Distribute</button>
+                    <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Assign</button>
+                    <button v-if="asset.status === 'available' || asset.status === 'assigned'" @click="openTransferModal(asset)" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 px-2 py-1 rounded text-xs font-medium transition">🔄 Transfer</button>
+                  </template>
+
+                  <!-- store-admin: request approval -->
+                  <template v-else-if="isStoreAdmin">
+                    <button v-if="asset.status === 'in_store'" @click="openRequestModal(asset, 'distribute')" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📦 Request Distribute</button>
+                    <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openRequestModal(asset, 'assign')" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Request Assign</button>
+                    <button v-if="asset.status === 'available' || asset.status === 'assigned'" @click="openRequestModal(asset, 'transfer')" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 px-2 py-1 rounded text-xs font-medium transition">🔄 Request Transfer</button>
+                    <span v-if="asset.status === 'pending_approval'" class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-medium">⏳ Awaiting Approval</span>
+                  </template>
+
+                  <button v-if="asset.status === 'assigned' && canApprove" @click="openReturnConfirm(asset)" class="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 px-2 py-1 rounded text-xs font-medium transition">↩️ Return</button>
+                  <button @click="viewHistory(asset)" class="bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium transition">📋 History</button>
+                  <button v-if="asset.status !== 'disposed' && canApprove" @click="openDisposeModal(asset)" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition">🗑️ Dispose</button>
+                  <button @click="deleteAsset(asset.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">❌</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 flex justify-between items-center border-t text-sm text-gray-500">
+          <span>Total: {{ pagination.total }} assets</span>
+          <div class="flex gap-2">
+            <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Prev</button>
+            <span class="px-3 py-1">{{ pagination.current_page }} / {{ pagination.last_page }}</span>
+            <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Next</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <!-- Pending Approvals Tab -->
+    <div v-if="activeTab === 'approvals'" class="bg-white rounded-xl shadow-sm overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b">
           <tr class="text-left text-gray-500">
-            <th class="px-4 py-3">Asset Tag</th>
-            <th class="px-4 py-3">Name</th>
-            <th class="px-4 py-3">Asset Category</th>
-            <th class="px-4 py-3">Department</th>
-            <th class="px-4 py-3">Room</th>
-            <th class="px-4 py-3">Employee</th>
-            <th class="px-4 py-3">Cost</th>
+            <th class="px-4 py-3">Asset</th>
+            <th class="px-4 py-3">Action</th>
+            <th class="px-4 py-3">Requested By</th>
+            <th class="px-4 py-3">Details</th>
             <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Condition</th>
             <th class="px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="10" class="text-center py-8 text-gray-400">Loading...</td></tr>
-          <tr v-else-if="assets.length === 0"><td colspan="10" class="text-center py-8 text-gray-400">No assets found</td></tr>
-          <tr v-for="asset in assets" :key="asset.id" class="border-b hover:bg-gray-50 transition">
-            <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono">{{ asset.asset_tag }}</span></td>
+          <tr v-if="loadingApprovals"><td colspan="6" class="text-center py-8 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="approvals.length === 0"><td colspan="6" class="text-center py-8 text-gray-400">No pending approvals</td></tr>
+          <tr v-for="approval in approvals" :key="approval.id" class="border-b hover:bg-gray-50 transition">
             <td class="px-4 py-3">
-              <p class="font-medium text-gray-700">{{ asset.name }}</p>
-              <p class="text-xs text-gray-400">{{ asset.model }}</p>
-            </td>
-            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.asset_category?.name || '—' }}</td>
-            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.department?.name || '—' }}</td>
-            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.room ? asset.room.name + ' (' + asset.room.room_number + ')' : '—' }}</td>
-            <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.employee?.name || '—' }}</td>
-            <td class="px-4 py-3 font-medium text-gray-700">৳{{ formatNumber(asset.purchase_cost) }}</td>
-            <td class="px-4 py-3">
-              <span :class="{
-                'bg-purple-100 text-purple-700': asset.status === 'in_store',
-                'bg-green-100 text-green-700': asset.status === 'available',
-                'bg-teal-100 text-teal-700': asset.status === 'in_room',
-                'bg-blue-100 text-blue-700': asset.status === 'assigned',
-                'bg-yellow-100 text-yellow-700': asset.status === 'under_maintenance',
-                'bg-red-100 text-red-700': asset.status === 'damaged' || asset.status === 'disposed',
-              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
-                {{ asset.status?.replace('_', ' ') }}
-              </span>
+              <p class="font-medium text-gray-700">{{ approval.fixed_asset?.name }}</p>
+              <p class="text-xs text-gray-400 font-mono">{{ approval.fixed_asset?.asset_tag }}</p>
             </td>
             <td class="px-4 py-3">
               <span :class="{
-                'bg-green-100 text-green-700': asset.condition === 'good',
-                'bg-yellow-100 text-yellow-700': asset.condition === 'fair',
-                'bg-orange-100 text-orange-700': asset.condition === 'poor',
-                'bg-red-100 text-red-700': asset.condition === 'damaged',
+                'bg-green-100 text-green-700': approval.action === 'assign',
+                'bg-indigo-100 text-indigo-700': approval.action === 'transfer',
+                'bg-purple-100 text-purple-700': approval.action === 'distribute',
               }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
-                {{ asset.condition }}
+                {{ approval.action }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ approval.requested_by?.name }}</td>
+            <td class="px-4 py-3 text-xs text-gray-500">
+              <div v-if="approval.action === 'assign'">
+                Employee: {{ approval.payload?.employee_id || '—' }}<br>
+                Dept: {{ approval.payload?.department_id || '—' }}
+              </div>
+              <div v-else-if="approval.action === 'transfer'">
+                To Dept: {{ approval.payload?.to_department_id || '—' }}
+              </div>
+              <div v-else-if="approval.action === 'distribute'">
+                Dept: {{ approval.payload?.department_id || '—' }}
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <span :class="{
+                'bg-yellow-100 text-yellow-700': approval.status === 'pending',
+                'bg-green-100 text-green-700': approval.status === 'approved',
+                'bg-red-100 text-red-700': approval.status === 'rejected',
+              }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                {{ approval.status }}
               </span>
             </td>
             <td class="px-4 py-3">
-              <div class="flex gap-1 flex-wrap">
-                <button @click="openModal(asset)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-xs font-medium transition">✏️</button>
-                <button v-if="asset.status === 'in_store'" @click="openDistributeModal(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition">📦 Distribute</button>
-                <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition">👤 Assign</button>
-                <button v-if="asset.status === 'assigned'" @click="openReturnConfirm(asset)" class="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 px-2 py-1 rounded text-xs font-medium transition">↩️ Return</button>
-                <button v-if="asset.status === 'available' || asset.status === 'assigned'" @click="openTransferModal(asset)" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 px-2 py-1 rounded text-xs font-medium transition">🔄 Transfer</button>
-                <button @click="viewHistory(asset)" class="bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium transition">📋 History</button>
-                <button v-if="asset.status !== 'disposed'" @click="openDisposeModal(asset)" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition">🗑️ Dispose</button>
-                <button @click="deleteAsset(asset.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded text-xs font-medium transition">❌</button>
+              <div v-if="approval.status === 'pending'" class="flex gap-2">
+                <button @click="approveRequest(approval)" :disabled="saving" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded text-xs font-medium transition disabled:opacity-50">✅ Approve</button>
+                <button @click="openRejectApproval(approval)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded text-xs font-medium transition">❌ Reject</button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
-      <div class="px-4 py-3 flex justify-between items-center border-t text-sm text-gray-500">
-        <span>Total: {{ pagination.total }} assets</span>
-        <div class="flex gap-2">
-          <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Prev</button>
-          <span class="px-3 py-1">{{ pagination.current_page }} / {{ pagination.last_page }}</span>
-          <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page" class="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Next</button>
-        </div>
-      </div>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -140,12 +222,11 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="col-span-2">
             <label class="text-xs font-medium text-gray-600">Asset Name *</label>
-            <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Dell Laptop, Steel Chair" />
+            <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label class="text-xs font-medium text-gray-600">Quantity (for bulk add)</label>
+            <label class="text-xs font-medium text-gray-600">Quantity</label>
             <input v-model="form.quantity" type="number" min="1" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <p class="text-xs text-gray-400 mt-1">Multiple quantity = multiple assets with unique tags</p>
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Model</label>
@@ -153,15 +234,12 @@
           </div>
           <div class="col-span-2">
             <label class="text-xs font-medium text-gray-600">Serial Numbers (one per line)</label>
-            <textarea v-model="serialNumbersText" rows="3"
-              placeholder="CIU-001&#10;CIU-002&#10;CIU-003"
-              class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-            <p class="text-xs text-gray-400 mt-1">Enter each serial number on a separate line</p>
+            <textarea v-model="serialNumbersText" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Asset Category</label>
             <select v-model="form.asset_category_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="">Select Asset Category</option>
+              <option value="">Select Category</option>
               <option v-for="ac in assetCategories" :key="ac.id" :value="ac.id">{{ ac.name }}</option>
             </select>
           </div>
@@ -188,15 +266,15 @@
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Purchase Date</label>
-            <input v-model="form.purchase_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="form.purchase_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Purchase Cost</label>
-            <input v-model="form.purchase_cost" type="number" min="0" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="form.purchase_cost" type="number" min="0" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Warranty Expiry</label>
-            <input v-model="form.warranty_expiry" type="date" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="form.warranty_expiry" type="date" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Condition</label>
@@ -209,7 +287,7 @@
           </div>
           <div class="col-span-2">
             <label class="text-xs font-medium text-gray-600">Description</label>
-            <textarea v-model="form.description" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <textarea v-model="form.description" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none"></textarea>
           </div>
         </div>
         <div class="flex gap-3 pt-2">
@@ -219,8 +297,90 @@
       </form>
     </AppModal>
 
-    <!-- Distribute Modal -->
-    <AppModal :show="showDistributeModal" title="Distribute Asset to Room/Department" @close="showDistributeModal = false">
+    <!-- Request Approval Modal (store-admin) -->
+    <AppModal :show="showRequestModal" :title="'Request ' + requestAction + ' Approval'" @close="showRequestModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
+      <form @submit.prevent="submitRequest" class="space-y-3">
+        <template v-if="requestAction === 'assign'">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Employee *</label>
+            <select v-model="requestForm.employee_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Employee</option>
+              <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }} ({{ e.employee_id }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Department</label>
+            <select v-model="requestForm.department_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Department</option>
+              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+        </template>
+        <template v-else-if="requestAction === 'transfer'">
+          <div>
+            <label class="text-xs font-medium text-gray-600">To Department *</label>
+            <select v-model="requestForm.to_department_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Department</option>
+              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">To Room</label>
+            <select v-model="requestForm.to_room_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Room</option>
+              <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Reason</label>
+            <input v-model="requestForm.reason" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+          </div>
+        </template>
+        <template v-else-if="requestAction === 'distribute'">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Department *</label>
+            <select v-model="requestForm.department_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Department</option>
+              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Room</label>
+            <select v-model="requestForm.room_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="">Select Room</option>
+              <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
+            </select>
+          </div>
+        </template>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Notes</label>
+          <input v-model="requestForm.notes" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="showRequestModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Submitting...' : '📨 Submit Request' }}</button>
+        </div>
+      </form>
+    </AppModal>
+
+    <!-- Reject Approval Modal -->
+    <AppModal :show="showRejectApprovalModal" title="Reject Approval" max-width="max-w-sm" @close="showRejectApprovalModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedApproval?.fixed_asset?.name }}</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Reason for rejection *</label>
+          <textarea v-model="rejectRemarks" required rows="3" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button @click="showRejectApprovalModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="rejectRequest" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">{{ saving ? 'Rejecting...' : 'Reject' }}</button>
+        </div>
+      </div>
+    </AppModal>
+
+    <!-- Distribute Modal (direct for fixed-asset-admin) -->
+    <AppModal :show="showDistributeModal" title="Distribute Asset" @close="showDistributeModal = false">
       <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
       <form @submit.prevent="submitDistribute" class="space-y-3">
         <div>
@@ -237,10 +397,6 @@
             <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
           </select>
         </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Notes</label>
-          <input v-model="distributeForm.notes" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
         <div class="flex gap-3 pt-2">
           <button type="button" @click="showDistributeModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Distributing...' : '📦 Distribute' }}</button>
@@ -248,8 +404,8 @@
       </form>
     </AppModal>
 
-    <!-- Assign Modal -->
-    <AppModal :show="showAssignModal" title="Assign Asset to Employee" @close="showAssignModal = false">
+    <!-- Assign Modal (direct for fixed-asset-admin) -->
+    <AppModal :show="showAssignModal" title="Assign Asset" @close="showAssignModal = false">
       <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
       <form @submit.prevent="assignAsset" class="space-y-3">
         <div>
@@ -268,11 +424,7 @@
         </div>
         <div>
           <label class="text-xs font-medium text-gray-600">Assigned Date *</label>
-          <input v-model="assignForm.assigned_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Notes</label>
-          <input v-model="assignForm.notes" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input v-model="assignForm.assigned_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" @click="showAssignModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
@@ -281,46 +433,9 @@
       </form>
     </AppModal>
 
-    <!-- Dispose Modal -->
-    <AppModal :show="showDisposeModal" title="Dispose Asset" @close="showDisposeModal = false">
-      <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
-      <form @submit.prevent="submitDispose" class="space-y-3">
-        <div>
-          <label class="text-xs font-medium text-gray-600">Disposal Date *</label>
-          <input v-model="disposeForm.disposal_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Method *</label>
-          <select v-model="disposeForm.method" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-            <option value="written_off">Written Off</option>
-            <option value="sold">Sold</option>
-            <option value="donated">Donated</option>
-            <option value="scrapped">Scrapped</option>
-            <option value="damaged">Damaged/Lost</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Disposal Value</label>
-          <input v-model="disposeForm.disposal_value" type="number" min="0" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Reason</label>
-          <textarea v-model="disposeForm.reason" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-        </div>
-        <div class="flex gap-3 pt-2">
-          <button type="button" @click="showDisposeModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button type="submit" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Processing...' : 'Dispose Asset' }}</button>
-        </div>
-      </form>
-    </AppModal>
-
-    <!-- Transfer Modal -->
+    <!-- Transfer Modal (direct for fixed-asset-admin) -->
     <AppModal :show="showTransferModal" title="Transfer Asset" @close="showTransferModal = false">
       <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
-      <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
-        <p class="text-gray-500">Current Location:</p>
-        <p class="font-medium text-gray-700">{{ selectedAsset?.department?.name || '—' }} / {{ selectedAsset?.room ? selectedAsset.room.name + ' (' + selectedAsset.room.room_number + ')' : '—' }}</p>
-      </div>
       <form @submit.prevent="submitTransfer" class="space-y-3">
         <div>
           <label class="text-xs font-medium text-gray-600">To Department *</label>
@@ -337,16 +452,45 @@
           </select>
         </div>
         <div>
-          <label class="text-xs font-medium text-gray-600">Transfer Date *</label>
-          <input v-model="transferForm.transfer_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
           <label class="text-xs font-medium text-gray-600">Reason</label>
-          <input v-model="transferForm.reason" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input v-model="transferForm.reason" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" @click="showTransferModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Transferring...' : '🔄 Transfer' }}</button>
+        </div>
+      </form>
+    </AppModal>
+
+    <!-- Dispose Modal -->
+    <AppModal :show="showDisposeModal" title="Dispose Asset" @close="showDisposeModal = false">
+      <p class="text-sm text-gray-500 mb-4">{{ selectedAsset?.name }} ({{ selectedAsset?.asset_tag }})</p>
+      <form @submit.prevent="submitDispose" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Disposal Date *</label>
+          <input v-model="disposeForm.disposal_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Method *</label>
+          <select v-model="disposeForm.method" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <option value="written_off">Written Off</option>
+            <option value="sold">Sold</option>
+            <option value="donated">Donated</option>
+            <option value="scrapped">Scrapped</option>
+            <option value="damaged">Damaged/Lost</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Disposal Value</label>
+          <input v-model="disposeForm.disposal_value" type="number" min="0" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Reason</label>
+          <textarea v-model="disposeForm.reason" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none"></textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="showDisposeModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm transition disabled:opacity-50">{{ saving ? 'Processing...' : 'Dispose Asset' }}</button>
         </div>
       </form>
     </AppModal>
@@ -377,15 +521,6 @@
             <p class="text-xs text-gray-400">{{ m.maintenance_date }} | {{ m.status }}</p>
           </div>
         </div>
-        <div v-if="historyData.disposal">
-          <h4 class="text-sm font-semibold text-gray-600 mb-2">Disposal Record</h4>
-          <div class="bg-red-50 rounded-lg p-3 text-sm">
-            <p class="font-medium text-red-700 capitalize">{{ historyData.disposal.method?.replace('_', ' ') }}</p>
-            <p class="text-xs text-gray-500">Date: {{ historyData.disposal.disposal_date }}</p>
-            <p class="text-xs text-gray-500">Value: ৳{{ formatNumber(historyData.disposal.disposal_value) }}</p>
-            <p class="text-xs text-gray-500">Reason: {{ historyData.disposal.reason || '—' }}</p>
-          </div>
-        </div>
       </div>
     </AppModal>
 
@@ -410,9 +545,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../../services/api'
 import AppModal from '../../components/ui/AppModal.vue'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
+
+// Role helpers
+const userRole = computed(() => {
+  const roles = auth.user?.roles
+  if (!roles) return ''
+  const first = Array.isArray(roles) ? roles[0] : Object.values(roles)[0]
+  return typeof first === 'string' ? first : first?.name ?? ''
+})
+const canApprove = computed(() => ['super-admin', 'fixed-asset-admin'].includes(userRole.value))
+const isStoreAdmin = computed(() => userRole.value === 'store-admin')
 
 const assets = ref([])
 const assetCategories = ref([])
@@ -420,20 +568,29 @@ const brands = ref([])
 const departments = ref([])
 const rooms = ref([])
 const employees = ref([])
+const approvals = ref([])
 const loading = ref(false)
+const loadingApprovals = ref(false)
 const saving = ref(false)
+const activeTab = ref('assets')
+const pendingApprovalsCount = ref(0)
+
 const showModal = ref(false)
 const showAssignModal = ref(false)
 const showDistributeModal = ref(false)
 const showDisposeModal = ref(false)
 const showHistoryModal = ref(false)
 const showConfirm = ref(false)
-const showProductDropdown = ref(false)
 const showTransferModal = ref(false)
+const showRequestModal = ref(false)
+const showRejectApprovalModal = ref(false)
+const showProductDropdown = ref(false)
+
 const editingAsset = ref(null)
 const selectedAsset = ref(null)
+const selectedApproval = ref(null)
 const confirmDeleteId = ref(null)
-const confirmAction = ref(null)   // 'delete' | 'return'
+const confirmAction = ref(null)
 const confirmTitle = ref('')
 const confirmMessage = ref('')
 const formError = ref(null)
@@ -444,23 +601,15 @@ const filterStatus = ref('')
 const filterDept = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const assetStats = ref({})
+const requestAction = ref('')
+const rejectRemarks = ref('')
 
-const transferForm = ref({
-  to_department_id: '', to_room_id: '',
-  transfer_date: new Date().toISOString().split('T')[0],
-  reason: '',
-})
-
-const form = ref({
-  name: '', quantity: 1, serial_number: '', model: '',
-  asset_category_id: '', brand_id: '', department_id: '', room_id: '',
-  purchase_date: '', purchase_cost: '', warranty_expiry: '',
-  condition: 'good', description: '',
-})
-
+const requestForm = ref({ employee_id: '', department_id: '', room_id: '', to_department_id: '', to_room_id: '', reason: '', notes: '' })
+const transferForm = ref({ to_department_id: '', to_room_id: '', reason: '' })
 const assignForm = ref({ employee_id: '', department_id: '', assigned_date: '', notes: '' })
-const distributeForm = ref({ department_id: '', room_id: '', notes: '' })
+const distributeForm = ref({ department_id: '', room_id: '' })
 const disposeForm = ref({ disposal_date: new Date().toISOString().split('T')[0], method: 'written_off', disposal_value: 0, reason: '' })
+const form = ref({ name: '', quantity: 1, serial_number: '', model: '', asset_category_id: '', brand_id: '', department_id: '', room_id: '', purchase_date: '', purchase_cost: '', warranty_expiry: '', condition: 'good', description: '' })
 
 function formatNumber(num) { return Number(num || 0).toLocaleString() }
 
@@ -475,23 +624,37 @@ async function fetchAssets(page = 1) {
 }
 
 async function fetchMasterData() {
-  const [ac, b, d, r, e] = await Promise.all([
-    api.get('/asset-categories', { params: { per_page: 100 } }),
-    api.get('/brands', { params: { per_page: 100 } }),
-    api.get('/departments', { params: { per_page: 100 } }),
-    api.get('/rooms', { params: { per_page: 100 } }),
-    api.get('/employees', { params: { per_page: 100 } }),
-  ])
-  assetCategories.value = ac.data.data.data
-  brands.value = b.data.data.data
-  departments.value = d.data.data.data
-  rooms.value = r.data.data.data
-  employees.value = e.data.data.data
+  try {
+    const [ac, b, d, r, e] = await Promise.all([
+      api.get('/asset-categories', { params: { per_page: 100 } }),
+      api.get('/brands', { params: { per_page: 100 } }),
+      api.get('/departments', { params: { per_page: 100 } }),
+      api.get('/rooms', { params: { per_page: 100 } }),
+      api.get('/employees', { params: { per_page: 100 } }),
+    ])
+    assetCategories.value = ac.data.data.data
+    brands.value = b.data.data.data
+    departments.value = d.data.data.data
+    rooms.value = r.data.data.data
+    employees.value = e.data.data.data
+  } catch (err) { console.error('Failed to load master data', err) }
 }
 
 async function fetchStats() {
-  const res = await api.get('/fixed-assets/stats')
-  assetStats.value = res.data.data
+  try {
+    const res = await api.get('/fixed-assets/stats')
+    assetStats.value = res.data.data
+  } catch (err) { console.error('Failed to load stats', err) }
+}
+
+async function fetchApprovals() {
+  loadingApprovals.value = true
+  try {
+    const res = await api.get('/asset-approvals', { params: { status: 'pending', per_page: 50 } })
+    approvals.value = res.data.data.data
+    pendingApprovalsCount.value = res.data.data.total
+  } catch (err) { console.error('Failed to load approvals', err) }
+  finally { loadingApprovals.value = false }
 }
 
 function openModal(asset = null) {
@@ -499,8 +662,7 @@ function openModal(asset = null) {
   formError.value = null
   serialNumbersText.value = asset ? (asset.serial_number || '') : ''
   form.value = asset ? {
-    name: asset.name, quantity: 1,
-    serial_number: asset.serial_number || '',
+    name: asset.name, quantity: 1, serial_number: asset.serial_number || '',
     model: asset.model || '', asset_category_id: asset.asset_category_id || '',
     brand_id: asset.brand?.id || '', department_id: asset.department?.id || '',
     room_id: asset.room?.id || '',
@@ -508,12 +670,7 @@ function openModal(asset = null) {
     purchase_cost: asset.purchase_cost || '',
     warranty_expiry: asset.warranty_expiry?.split('T')[0] || '',
     condition: asset.condition || 'good', description: asset.description || '',
-  } : {
-    name: '', quantity: 1, serial_number: '', model: '', asset_category_id: '',
-    brand_id: '', department_id: '', room_id: '',
-    purchase_date: '', purchase_cost: '', warranty_expiry: '',
-    condition: 'good', description: '',
-  }
+  } : { name: '', quantity: 1, serial_number: '', model: '', asset_category_id: '', brand_id: '', department_id: '', room_id: '', purchase_date: '', purchase_cost: '', warranty_expiry: '', condition: 'good', description: '' }
   showModal.value = true
 }
 
@@ -522,8 +679,7 @@ function closeModal() { showModal.value = false; editingAsset.value = null }
 async function saveAsset() {
   saving.value = true; formError.value = null
   try {
-    const serialNumbers = serialNumbersText.value
-      .split('\n').map(s => s.trim()).filter(s => s.length > 0)
+    const serialNumbers = serialNumbersText.value.split('\n').map(s => s.trim()).filter(s => s.length > 0)
     const payload = { ...form.value, serial_numbers: serialNumbers }
     if (editingAsset.value) { await api.put(`/fixed-assets/${editingAsset.value.id}`, payload) }
     else { await api.post('/fixed-assets', payload) }
@@ -532,6 +688,53 @@ async function saveAsset() {
   finally { saving.value = false }
 }
 
+// Request modal (store-admin)
+function openRequestModal(asset, action) {
+  selectedAsset.value = asset
+  requestAction.value = action
+  requestForm.value = { employee_id: '', department_id: '', room_id: '', to_department_id: '', to_room_id: '', reason: '', notes: '' }
+  showRequestModal.value = true
+}
+
+async function submitRequest() {
+  saving.value = true
+  try {
+    const endpoints = { assign: 'request-assign', transfer: 'request-transfer', distribute: 'request-distribute' }
+    await api.post(`/fixed-assets/${selectedAsset.value.id}/${endpoints[requestAction.value]}`, requestForm.value)
+    showRequestModal.value = false
+    fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
+  finally { saving.value = false }
+}
+
+// Approve/Reject (fixed-asset-admin)
+async function approveRequest(approval) {
+  saving.value = true
+  try {
+    await api.patch(`/asset-approvals/${approval.id}/approve`)
+    fetchApprovals(); fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Could not approve') }
+  finally { saving.value = false }
+}
+
+function openRejectApproval(approval) {
+  selectedApproval.value = approval
+  rejectRemarks.value = ''
+  showRejectApprovalModal.value = true
+}
+
+async function rejectRequest() {
+  if (!rejectRemarks.value.trim()) { alert('Please enter a reason for rejection'); return }
+  saving.value = true
+  try {
+    await api.patch(`/asset-approvals/${selectedApproval.value.id}/reject`, { remarks: rejectRemarks.value })
+    showRejectApprovalModal.value = false
+    fetchApprovals(); fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Could not reject') }
+  finally { saving.value = false }
+}
+
+// Direct actions (fixed-asset-admin)
 function openAssignModal(asset) {
   selectedAsset.value = asset
   assignForm.value = { employee_id: '', department_id: asset.department?.id || '', assigned_date: new Date().toISOString().split('T')[0], notes: '' }
@@ -549,7 +752,7 @@ async function assignAsset() {
 
 function openDistributeModal(asset) {
   selectedAsset.value = asset
-  distributeForm.value = { department_id: '', room_id: '', notes: '' }
+  distributeForm.value = { department_id: '', room_id: '' }
   showDistributeModal.value = true
 }
 
@@ -558,6 +761,21 @@ async function submitDistribute() {
   try {
     await api.patch(`/fixed-assets/${selectedAsset.value.id}/distribute`, distributeForm.value)
     showDistributeModal.value = false; fetchAssets()
+  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
+  finally { saving.value = false }
+}
+
+function openTransferModal(asset) {
+  selectedAsset.value = asset
+  transferForm.value = { to_department_id: '', to_room_id: '', reason: '' }
+  showTransferModal.value = true
+}
+
+async function submitTransfer() {
+  saving.value = true
+  try {
+    await api.post(`/fixed-assets/${selectedAsset.value.id}/transfer`, transferForm.value)
+    showTransferModal.value = false; fetchAssets()
   } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
   finally { saving.value = false }
 }
@@ -584,17 +802,12 @@ async function confirmProceed() {
     if (confirmAction.value === 'delete') {
       await api.delete(`/fixed-assets/${confirmDeleteId.value}`)
     } else if (confirmAction.value === 'return') {
-      await api.post(`/fixed-assets/${selectedAsset.value.id}/return`, {
-        return_date: new Date().toISOString().split('T')[0]
-      })
+      await api.post(`/fixed-assets/${selectedAsset.value.id}/return`, { return_date: new Date().toISOString().split('T')[0] })
     }
-    showConfirm.value = false
-    confirmDeleteId.value = null
-    confirmAction.value = null
+    showConfirm.value = false; confirmDeleteId.value = null; confirmAction.value = null
     fetchAssets()
-  } catch (err) {
-    alert(err.response?.data?.message || 'Something went wrong')
-  } finally { saving.value = false }
+  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
+  finally { saving.value = false }
 }
 
 function openDisposeModal(asset) {
@@ -620,29 +833,14 @@ async function viewHistory(asset) {
   } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
 }
 
-function openTransferModal(asset) {
-  selectedAsset.value = asset
-  transferForm.value = {
-    to_department_id: '', to_room_id: '',
-    transfer_date: new Date().toISOString().split('T')[0],
-    reason: '',
-  }
-  showTransferModal.value = true
-}
-
-async function submitTransfer() {
-  saving.value = true
-  try {
-    await api.post(`/fixed-assets/${selectedAsset.value.id}/transfer`, transferForm.value)
-    showTransferModal.value = false; fetchAssets()
-  } catch (err) { alert(err.response?.data?.message || 'Something went wrong') }
-  finally { saving.value = false }
-}
-
 function changePage(page) {
   if (page < 1 || page > pagination.value.last_page) return
   fetchAssets(page)
 }
 
-onMounted(() => { fetchAssets(); fetchMasterData(); fetchStats() })
+onMounted(() => {
+  fetchAssets()
+  fetchMasterData()
+  if (canApprove.value) fetchApprovals()
+})
 </script>
