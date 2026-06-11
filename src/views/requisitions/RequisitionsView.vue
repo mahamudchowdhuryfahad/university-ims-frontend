@@ -265,7 +265,6 @@ async function fetchRequisitions(page = 1) {
 
 async function fetchMasterData() {
   try {
-    if (isRequester.value) return // requester এর permission নেই
     const [d, p] = await Promise.all([
       api.get('/departments', { params: { per_page: 100 } }),
       api.get('/products', { params: { per_page: 100 } }),
