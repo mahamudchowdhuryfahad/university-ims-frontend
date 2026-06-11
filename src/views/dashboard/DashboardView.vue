@@ -12,56 +12,32 @@
       </div>
     </div>
 
-    <!-- Fixed Assets by Status -->
+    <!-- Charts Row -->
     <div class="grid grid-cols-2 gap-4">
+
+      <!-- Asset Status Doughnut -->
       <div class="bg-white rounded-xl shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">Asset Status Overview</h3>
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-green-500"></div>
-              <span class="text-sm text-gray-600">Available</span>
-            </div>
-            <span class="font-semibold text-gray-700">{{ statsData.available_assets || 0 }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span class="text-sm text-gray-600">Assigned</span>
-            </div>
-            <span class="font-semibold text-gray-700">{{ statsData.assigned_assets || 0 }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span class="text-sm text-gray-600">Under Maintenance</span>
-            </div>
-            <span class="font-semibold text-gray-700">{{ statsData.under_maintenance_assets || 0 }}</span>
-          </div>
+        <p class="text-sm font-semibold text-gray-700 mb-3">Asset Status</p>
+        <div class="flex gap-3 flex-wrap mb-3">
+          <span v-for="item in assetLegend" :key="item.label"
+            class="flex items-center gap-1 text-xs text-gray-500">
+            <span class="w-2.5 h-2.5 rounded-sm inline-block" :style="{ background: item.color }"></span>
+            {{ item.label }} {{ item.value }}
+          </span>
+        </div>
+        <div style="position: relative; height: 200px;">
+          <canvas id="assetChart"></canvas>
         </div>
       </div>
 
+      <!-- University Overview Bar -->
       <div class="bg-white rounded-xl shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">University Overview</h3>
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">🏫 Schools</span>
-            <span class="font-semibold text-gray-700">{{ statsData.total_schools || 0 }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">🏢 Departments</span>
-            <span class="font-semibold text-gray-700">{{ statsData.total_departments || 0 }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">👨‍💼 Employees</span>
-            <span class="font-semibold text-gray-700">{{ statsData.total_employees || 0 }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">📋 Pending Requisitions</span>
-            <span class="font-semibold text-orange-500">{{ statsData.pending_requisitions || 0 }}</span>
-          </div>
+        <p class="text-sm font-semibold text-gray-700 mb-3">University Overview</p>
+        <div style="position: relative; height: 220px;">
+          <canvas id="uniChart"></canvas>
         </div>
       </div>
+
     </div>
 
     <!-- Low Stock Alert -->
@@ -100,28 +76,110 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { Chart, ArcElement, DoughnutController, BarElement, BarController, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import api from '../../services/api'
+
+Chart.register(ArcElement, DoughnutController, BarElement, BarController, CategoryScale, LinearScale, Tooltip, Legend)
 
 const statsData = ref({})
 const lowStock = ref([])
 const loadingStats = ref(false)
 
+let assetChartInstance = null
+let uniChartInstance = null
+
 const stats = computed(() => [
-  { label: 'Total Fixed Assets',   value: statsData.value.total_fixed_assets || 0,       icon: '🖥️' },
-  { label: 'Assigned Assets',      value: statsData.value.assigned_assets || 0,           icon: '👤' },
-  { label: 'Total Products',       value: statsData.value.total_products || 0,            icon: '📦' },
-  { label: 'Pending Requisitions', value: statsData.value.pending_requisitions || 0,      icon: '📋' },
-  { label: 'Total Schools',        value: statsData.value.total_schools || 0,             icon: '🏫' },
-  { label: 'Departments',          value: statsData.value.total_departments || 0,         icon: '🏢' },
-  { label: 'Employees',            value: statsData.value.total_employees || 0,           icon: '👨‍💼' },
-  { label: 'Under Maintenance',    value: statsData.value.under_maintenance_assets || 0,  icon: '🔧' },
+  { label: 'Total Fixed Assets',   value: statsData.value.total_fixed_assets || 0,      icon: '🖥️' },
+  { label: 'Assigned Assets',      value: statsData.value.assigned_assets || 0,          icon: '👤' },
+  { label: 'Total Products',       value: statsData.value.total_products || 0,           icon: '📦' },
+  { label: 'Pending Requisitions', value: statsData.value.pending_requisitions || 0,     icon: '📋' },
+  { label: 'Total Schools',        value: statsData.value.total_schools || 0,            icon: '🏫' },
+  { label: 'Departments',          value: statsData.value.total_departments || 0,        icon: '🏢' },
+  { label: 'Employees',            value: statsData.value.total_employees || 0,          icon: '👨‍💼' },
+  { label: 'Under Maintenance',    value: statsData.value.under_maintenance_assets || 0, icon: '🔧' },
 ])
+
+const assetLegend = computed(() => [
+  { label: 'In Store',     value: statsData.value.in_store_assets || 0,           color: '#8b5cf6' },
+  { label: 'Available',    value: statsData.value.available_assets || 0,          color: '#22c55e' },
+  { label: 'Assigned',     value: statsData.value.assigned_assets || 0,           color: '#3b82f6' },
+  { label: 'Maintenance',  value: statsData.value.under_maintenance_assets || 0,  color: '#f59e0b' },
+  { label: 'Disposed',     value: statsData.value.disposed_assets || 0,           color: '#ef4444' },
+])
+
+function renderAssetChart() {
+  const ctx = document.getElementById('assetChart')
+  if (!ctx) return
+  if (assetChartInstance) assetChartInstance.destroy()
+
+  assetChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: assetLegend.value.map(i => i.label),
+      datasets: [{
+        data: assetLegend.value.map(i => i.value),
+        backgroundColor: assetLegend.value.map(i => i.color),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed } }
+      }
+    }
+  })
+}
+
+function renderUniChart() {
+  const ctx = document.getElementById('uniChart')
+  if (!ctx) return
+  if (uniChartInstance) uniChartInstance.destroy()
+
+  uniChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Schools', 'Departments', 'Employees', 'Pending Req.'],
+      datasets: [{
+        data: [
+          statsData.value.total_schools || 0,
+          statsData.value.total_departments || 0,
+          statsData.value.total_employees || 0,
+          statsData.value.pending_requisitions || 0,
+        ],
+        backgroundColor: ['#185FA5', '#185FA5', '#185FA5', '#BA7517'],
+        borderRadius: 4,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: 'rgba(128,128,128,0.1)' },
+          ticks: { stepSize: 1 }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  })
+}
 
 async function fetchStats() {
   try {
     const res = await api.get('/dashboard/stats')
     statsData.value = res.data.data
+    await nextTick()
+    renderAssetChart()
+    renderUniChart()
   } catch (err) {
     console.error('Failed to load dashboard stats', err)
   }
