@@ -77,7 +77,7 @@
               <th class="px-4 py-3">Department</th>
               <th class="px-4 py-3">Status</th>
               <th class="px-4 py-3">Condition</th>
-              <th class="px-4 py-3">Actions</th>
+              <th class="px-4 py-3 w-56">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -121,7 +121,6 @@
                 <div class="flex gap-1 flex-wrap">
                   <button @click="openModal(asset)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-pencil"></i> Edit</button>
 
-                  <!-- fixed-asset-admin / super-admin: direct actions -->
                   <template v-if="canApprove">
                     <button v-if="asset.status === 'in_store'" @click="openDistributeModal(asset)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-package"></i> Distribute</button>
                     <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openAssignModal(asset)" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-user-check"></i> Assign</button>
@@ -130,11 +129,12 @@
                     <button v-if="asset.status !== 'disposed'" @click="openDisposeModal(asset)" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-trash"></i> Dispose</button>
                   </template>
 
-                  <!-- store-admin: request approval -->
                   <template v-else-if="isStoreAdmin">
                     <button v-if="asset.status === 'in_store'" @click="openRequestModal(asset, 'distribute')" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-package"></i> Request Distribute</button>
                     <button v-if="asset.status === 'available' || asset.status === 'in_store'" @click="openRequestModal(asset, 'assign')" class="bg-green-100 text-green-600 hover:bg-green-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-user-check"></i> Request Assign</button>
                     <button v-if="asset.status === 'available' || asset.status === 'assigned'" @click="openRequestModal(asset, 'transfer')" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-transfer"></i> Request Transfer</button>
+                    <button v-if="asset.status !== 'disposed' && asset.status !== 'pending_approval'" @click="openRequestModal(asset, 'dispose')" class="bg-orange-100 text-orange-500 hover:bg-orange-200 px-2 py-1 rounded text-xs font-medium transition"><i class="ti ti-trash"></i> Request Dispose</button>
+
                     <span v-if="asset.status === 'pending_approval'" class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-medium">Awaiting Approval</span>
                   </template>
 
@@ -189,14 +189,16 @@
             <td class="px-4 py-3 text-gray-500 text-xs">{{ approval.requested_by?.name }}</td>
             <td class="px-4 py-3 text-xs text-gray-500">
               <div v-if="approval.action === 'assign'">
-                Employee ID: {{ approval.payload?.employee_id || '-' }}<br>
-                Dept ID: {{ approval.payload?.department_id || '-' }}
+                <span class="text-gray-400">Employee:</span> {{ getEmployeeName(approval.payload?.employee_id) }}<br>
+                <span class="text-gray-400">Dept:</span> {{ getDeptName(approval.payload?.department_id) }}
               </div>
               <div v-else-if="approval.action === 'transfer'">
-                To Dept ID: {{ approval.payload?.to_department_id || '-' }}
+                <span class="text-gray-400">To Dept:</span> {{ getDeptName(approval.payload?.to_department_id) }}<br>
+                <span class="text-gray-400">To Room:</span> {{ getRoomName(approval.payload?.to_room_id) }}
               </div>
               <div v-else-if="approval.action === 'distribute'">
-                Dept ID: {{ approval.payload?.department_id || '-' }}
+                <span class="text-gray-400">Dept:</span> {{ getDeptName(approval.payload?.department_id) }}<br>
+                <span class="text-gray-400">Room:</span> {{ getRoomName(approval.payload?.room_id) }}
               </div>
             </td>
             <td class="px-4 py-3">
@@ -356,6 +358,26 @@
               <option value="">Select Room</option>
               <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
             </select>
+          </div>
+        </template>
+        <template v-else-if="requestAction === 'dispose'">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Disposal Date *</label>
+            <input v-model="requestForm.disposal_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Method *</label>
+            <select v-model="requestForm.method" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+              <option value="written_off">Written Off</option>
+              <option value="sold">Sold</option>
+              <option value="donated">Donated</option>
+              <option value="scrapped">Scrapped</option>
+              <option value="damaged">Damaged/Lost</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Reason</label>
+            <textarea v-model="requestForm.reason" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none"></textarea>
           </div>
         </template>
         <div>
@@ -608,7 +630,7 @@ const assetStats = ref({})
 const requestAction = ref('')
 const rejectRemarks = ref('')
 
-const requestForm = ref({ employee_id: '', department_id: '', room_id: '', to_department_id: '', to_room_id: '', reason: '', notes: '' })
+const requestForm = ref({ employee_id: '', department_id: '', room_id: '', to_department_id: '', to_room_id: '', reason: '', notes: '',disposal_date: new Date().toISOString().split('T')[0],method: 'written_off', disposal_value: 0 })
 const transferForm = ref({ to_department_id: '', to_room_id: '', reason: '' })
 const assignForm = ref({ employee_id: '', department_id: '', assigned_date: '', notes: '' })
 const distributeForm = ref({ department_id: '', room_id: '' })
@@ -616,6 +638,20 @@ const disposeForm = ref({ disposal_date: new Date().toISOString().split('T')[0],
 const form = ref({ name: '', quantity: 1, serial_number: '', model: '', asset_category_id: '', brand_id: '', department_id: '', room_id: '', purchase_date: '', purchase_cost: '', warranty_expiry: '', condition: 'good', description: '' })
 
 function formatNumber(num) { return Number(num || 0).toLocaleString() }
+
+// Helper functions for displaying names in approvals
+function getDeptName(id) {
+  if (!id) return '-'
+  return departments.value.find(d => d.id === Number(id))?.name || `ID: ${id}`
+}
+function getRoomName(id) {
+  if (!id) return '-'
+  return rooms.value.find(r => r.id === Number(id))?.name || `ID: ${id}`
+}
+function getEmployeeName(id) {
+  if (!id) return '-'
+  return employees.value.find(e => e.id === Number(id))?.name || `ID: ${id}`
+}
 
 async function fetchAssets(page = 1) {
   loading.value = true
@@ -706,7 +742,7 @@ function openRequestModal(asset, action) {
 async function submitRequest() {
   saving.value = true
   try {
-    const endpoints = { assign: 'request-assign', transfer: 'request-transfer', distribute: 'request-distribute' }
+    const endpoints = { assign: 'request-assign', transfer: 'request-transfer', distribute: 'request-distribute',dispose: 'request-dispose' }
     await api.post(`/fixed-assets/${selectedAsset.value.id}/${endpoints[requestAction.value]}`, requestForm.value)
     showRequestModal.value = false
     fetchAssets()

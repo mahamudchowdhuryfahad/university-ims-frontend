@@ -156,7 +156,9 @@ const form = ref({ name: '', category_id: '', unit: 'pcs', alert_quantity: 10, d
 async function fetchProducts(page = 1) {
   loading.value = true
   try {
-    const res = await api.get('/products', { params: { page, per_page: 15, search: search.value, is_active: filterStatus.value } })
+    const params = { page, per_page: 15, search: search.value }
+    if (filterStatus.value !== '') params.is_active = filterStatus.value
+    const res = await api.get('/products', { params })
     products.value = res.data.data.data
     pagination.value = { current_page: res.data.data.current_page, last_page: res.data.data.last_page, total: res.data.data.total }
   } finally { loading.value = false }
