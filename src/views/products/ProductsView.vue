@@ -1,12 +1,12 @@
 ﻿<template>
   <div class="space-y-4">
     <div class="flex justify-between items-center">
-      <h2 class="text-xl font-bold text-gray-700">Products</h2>
+      <h2 class="text-xl font-bold text-gray-700">Consumable Products</h2>
       <button @click="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">+ Add Product</button>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm p-4 flex gap-3">
-      <input v-model="search" @input="fetchProducts" type="text" placeholder="Search by name, SKU, barcode..."
+      <input v-model="search" @input="fetchProducts" type="text" placeholder="Search by name..."
         class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       <select v-model="filterStatus" @change="fetchProducts" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
         <option value="">All Status</option>
@@ -21,29 +21,32 @@
           <tr class="text-left text-gray-500">
             <th class="px-4 py-3">#</th>
             <th class="px-4 py-3">Product</th>
-            <th class="px-4 py-3">SKU</th>
             <th class="px-4 py-3">Category</th>
+            <th class="px-4 py-3">Unit</th>
             <th class="px-4 py-3">Stock</th>
+            <th class="px-4 py-3">Alert Qty</th>
             <th class="px-4 py-3">Status</th>
             <th class="px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="7" class="text-center py-8 text-gray-400">Loading...</td></tr>
-          <tr v-else-if="products.length === 0"><td colspan="7" class="text-center py-8 text-gray-400">No products found</td></tr>
+          <tr v-if="loading"><td colspan="8" class="text-center py-8 text-gray-400">Loading...</td></tr>
+          <tr v-else-if="products.length === 0"><td colspan="8" class="text-center py-8 text-gray-400">No products found</td></tr>
           <tr v-for="product in products" :key="product.id" class="border-b hover:bg-gray-50 transition">
             <td class="px-4 py-3 text-gray-400">{{ product.id }}</td>
             <td class="px-4 py-3">
               <p class="font-medium text-gray-700">{{ product.name }}</p>
-              <p class="text-xs text-gray-400">{{ product.barcode }}</p>
+              <p v-if="product.description" class="text-xs text-gray-400">{{ product.description }}</p>
             </td>
-            <td class="px-4 py-3 text-gray-500">{{ product.sku }}</td>
-            <td class="px-4 py-3 text-gray-500">{{ product.category?.name || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500">{{ product.category?.name || '-' }}</td>
+            <td class="px-4 py-3 text-gray-500 capitalize">{{ product.unit }}</td>
             <td class="px-4 py-3">
-              <span :class="product.total_stock <= product.alert_quantity ? 'text-red-500 font-semibold' : 'text-green-600'">
+              <span :class="product.total_stock <= product.alert_quantity ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold'">
                 {{ product.total_stock ?? 0 }}
               </span>
+              <span v-if="product.total_stock <= product.alert_quantity" class="ml-1 text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">Low</span>
             </td>
+            <td class="px-4 py-3 text-gray-500">{{ product.alert_quantity }}</td>
             <td class="px-4 py-3">
               <span :class="product.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">
                 {{ product.is_active ? 'Active' : 'Inactive' }}
@@ -51,8 +54,8 @@
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-2">
-                <button @click="openModal(product)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded-lg text-xs font-medium transition">✏️ Edit</button>
-                <button @click="deleteProduct(product.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">🗑️ Delete</button>
+                <button @click="openModal(product)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded-lg text-xs font-medium transition">Edit</button>
+                <button @click="deleteProduct(product.id)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">Delete</button>
               </div>
             </td>
           </tr>
@@ -75,15 +78,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="col-span-2">
             <label class="text-xs font-medium text-gray-600">Product Name *</label>
-            <input v-model="form.name" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">SKU</label>
-            <input v-model="form.sku" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="text-xs font-medium text-gray-600">Barcode</label>
-            <input v-model="form.barcode" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="form.name" required placeholder="e.g. A4 Paper, Toner Cartridge" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Category</label>
@@ -93,20 +88,17 @@
             </select>
           </div>
           <div>
-            <label class="text-xs font-medium text-gray-600">Brand</label>
-            <select v-model="form.brand_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
-              <option value="">Select Brand</option>
-              <option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option>
-            </select>
-          </div>
-          <div>
             <label class="text-xs font-medium text-gray-600">Unit</label>
             <select v-model="form.unit" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
               <option value="pcs">Pcs</option>
-              <option value="kg">KG</option>
-              <option value="ltr">Ltr</option>
+              <option value="ream">Ream</option>
               <option value="box">Box</option>
               <option value="set">Set</option>
+              <option value="bottle">Bottle</option>
+              <option value="packet">Packet</option>
+              <option value="roll">Roll</option>
+              <option value="kg">KG</option>
+              <option value="ltr">Ltr</option>
             </select>
           </div>
           <div>
@@ -132,7 +124,6 @@
     <!-- Delete Confirm -->
     <AppModal :show="showConfirm" title="Delete Product" max-width="max-w-sm" @close="showConfirm = false">
       <div class="text-center">
-        <div class="text-5xl mb-4">🗑️</div>
         <p class="text-sm text-gray-500 mb-6">Are you sure? This action cannot be undone.</p>
         <div class="flex gap-3">
           <button @click="showConfirm = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
@@ -150,7 +141,6 @@ import AppModal from '../../components/ui/AppModal.vue'
 
 const products = ref([])
 const categories = ref([])
-const brands = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
@@ -161,7 +151,7 @@ const formError = ref(null)
 const search = ref('')
 const filterStatus = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
-const form = ref({ name: '', sku: '', barcode: '', category_id: '', brand_id: '', unit: 'pcs', alert_quantity: 10, description: '', is_active: true })
+const form = ref({ name: '', category_id: '', unit: 'pcs', alert_quantity: 10, description: '', is_active: true })
 
 async function fetchProducts(page = 1) {
   loading.value = true
@@ -174,22 +164,19 @@ async function fetchProducts(page = 1) {
 
 async function fetchMasterData() {
   try {
-    const [c, b] = await Promise.all([
-      api.get('/categories', { params: { per_page: 100 } }),
-      api.get('/brands', { params: { per_page: 100 } }),
-    ])
-    categories.value = c.data.data.data
-    brands.value = b.data.data.data
+    const res = await api.get('/categories', { params: { per_page: 100 } })
+    categories.value = res.data.data.data
   } catch (err) {
-    console.error('Failed to load master data', err)
+    console.error('Failed to load categories', err)
   }
 }
 
 function openModal(product = null) {
   editingProduct.value = product
   formError.value = null
-  form.value = product ? { name: product.name, sku: product.sku || '', barcode: product.barcode || '', category_id: product.category?.id || '', brand_id: product.brand?.id || '', unit: product.unit || 'pcs', alert_quantity: product.alert_quantity || 10, description: product.description || '', is_active: product.is_active }
-    : { name: '', sku: '', barcode: '', category_id: '', brand_id: '', unit: 'pcs', alert_quantity: 10, description: '', is_active: true }
+  form.value = product
+    ? { name: product.name, category_id: product.category?.id || '', unit: product.unit || 'pcs', alert_quantity: product.alert_quantity || 10, description: product.description || '', is_active: product.is_active }
+    : { name: '', category_id: '', unit: 'pcs', alert_quantity: 10, description: '', is_active: true }
   showModal.value = true
 }
 
