@@ -75,6 +75,7 @@
               <th class="px-4 py-3">Name</th>
               <th class="px-4 py-3">Category</th>
               <th class="px-4 py-3">Department</th>
+              <th class="px-4 py-3">Room</th>
               <th class="px-4 py-3">Status</th>
               <th class="px-4 py-3">Condition</th>
               <th class="px-4 py-3 w-56">Actions</th>
@@ -95,6 +96,7 @@
               </td>
               <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.assetCategory?.name || asset.asset_category?.name || '-' }}</td>
               <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.department?.name || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs">{{ asset.room ? asset.room.name + ' (' + asset.room.room_number + ')' : '-' }}</td>
               <td class="px-4 py-3">
                 <span :class="{
                   'bg-purple-100 text-purple-700': asset.status === 'in_store',
@@ -358,6 +360,10 @@
               <option value="">Select Room</option>
               <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
             </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Transfer Date *</label>
+            <input v-model="requestForm.transfer_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
           </div>
         </template>
         <template v-else-if="requestAction === 'dispose'">
@@ -630,7 +636,16 @@ const assetStats = ref({})
 const requestAction = ref('')
 const rejectRemarks = ref('')
 
-const requestForm = ref({ employee_id: '', department_id: '', room_id: '', to_department_id: '', to_room_id: '', reason: '', notes: '',disposal_date: new Date().toISOString().split('T')[0],method: 'written_off', disposal_value: 0 })
+const requestForm = ref({ employee_id: '', 
+                          department_id: '', 
+                          room_id: '', 
+                          to_department_id: '', 
+                          to_room_id: '', 
+                          transfer_date: new Date().toISOString().split('T')[0],  // ← add default transfer date
+                          reason: '', 
+                          notes: '',
+                          disposal_date: new Date().toISOString().split('T')[0],method: 'written_off', disposal_value: 0 
+                        })
 const transferForm = ref({ to_department_id: '', to_room_id: '', reason: '' })
 const assignForm = ref({ employee_id: '', department_id: '', assigned_date: '', notes: '' })
 const distributeForm = ref({ department_id: '', room_id: '' })
@@ -664,20 +679,21 @@ async function fetchAssets(page = 1) {
 }
 
 async function fetchMasterData() {
-  try {
-    const [ac, b, d, r, e] = await Promise.all([
-      api.get('/asset-categories', { params: { per_page: 100 } }),
-      api.get('/brands', { params: { per_page: 100 } }),
-      api.get('/departments', { params: { per_page: 100 } }),
-      api.get('/rooms', { params: { per_page: 100 } }),
-      api.get('/employees', { params: { per_page: 100 } }),
-    ])
-    assetCategories.value = ac.data.data.data
-    brands.value = b.data.data.data
-    departments.value = d.data.data.data
-    rooms.value = r.data.data.data
-    employees.value = e.data.data.data
-  } catch (err) { console.error('Failed to load master data', err) }
+  const load = async (url, target) => {
+    try {
+      const res = await api.get(url, { params: { per_page: 100 } })
+      target.value = res.data.data.data
+    } catch (err) {
+      target.value = []
+    }
+  }
+  await Promise.all([
+    load('/asset-categories', assetCategories),
+    load('/brands', brands),
+    load('/departments', departments),
+    load('/rooms', rooms),
+    load('/employees', employees),
+  ])
 }
 
 async function fetchStats() {

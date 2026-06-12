@@ -54,9 +54,10 @@
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-2">
-                <button @click="viewRequisition(req)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-3 py-1 rounded-lg text-xs font-medium transition">👁️ View</button>
-                <button v-if="req.status === 'pending' && canApprove" @click="openApproveModal(req)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">✅ Approve</button>
-                <button v-if="req.status === 'pending' && canApprove" @click="openRejectModal(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">❌ Reject</button>
+                <button @click="viewRequisition(req)" class="bg-purple-100 text-purple-600 hover:bg-purple-200 px-3 py-1 rounded-lg text-xs font-medium transition">View</button>
+                <button v-if="req.status === 'pending' && canApproveReq(req)" @click="openApproveModal(req)" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-lg text-xs font-medium transition">Approve</button>
+                <button v-if="req.status === 'pending' && canApproveReq(req)" @click="openRejectModal(req)" class="bg-red-100 text-red-500 hover:bg-red-200 px-3 py-1 rounded-lg text-xs font-medium transition">Reject</button>
+                <button v-if="req.status === 'approved' && canFulfill(req)" @click="openFulfillModal(req)" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded-lg text-xs font-medium transition">Fulfill</button>
               </div>
             </td>
           </tr>
@@ -86,7 +87,7 @@
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600">Type *</label>
-            <select v-model="form.type" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
+            <select v-model="form.type" required @change="onTypeChange" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none">
               <option value="consumable">Consumable</option>
               <option value="fixed_asset">Fixed Asset</option>
             </select>
@@ -100,11 +101,13 @@
             <input v-model="form.required_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div class="col-span-2">
-            <label class="text-xs font-medium text-gray-600">Purpose</label>
-            <input v-model="form.purpose" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="text-xs font-medium text-gray-600">Purpose / Notes</label>
+            <textarea v-model="form.purpose" rows="2" placeholder="Describe what you need and why..." class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
-        <div>
+
+        <!-- Consumable Items -->
+        <div v-if="form.type === 'consumable'">
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm font-medium text-gray-600">Items *</label>
             <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
@@ -120,10 +123,30 @@
               <input v-model="item.requested_quantity" type="number" min="1" placeholder="Qty" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
             </div>
             <div class="col-span-1 text-center">
-              <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">×</button>
+              <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">x</button>
             </div>
           </div>
         </div>
+
+        <!-- Fixed Asset Items -->
+        <div v-else-if="form.type === 'fixed_asset'">
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-sm font-medium text-gray-600">Items *</label>
+            <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
+          </div>
+          <div v-for="(item, index) in form.items" :key="index" class="grid grid-cols-7 gap-2 mb-2 items-center">
+            <div class="col-span-4">
+              <input v-model="item.item_description" required placeholder="e.g. HP LaserJet Printer, Office Chair..." class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
+            </div>
+            <div class="col-span-2">
+              <input v-model="item.requested_quantity" type="number" min="1" placeholder="Qty" required class="w-full border rounded-lg px-2 py-2 text-sm focus:outline-none" />
+            </div>
+            <div class="col-span-1 text-center">
+              <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-lg">x</button>
+            </div>
+          </div>
+        </div>
+
         <div class="flex gap-3">
           <button type="button" @click="showModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Saving...' : 'Submit' }}</button>
@@ -141,7 +164,7 @@
           <div><span class="text-gray-500">Type:</span> <span class="font-medium capitalize">{{ selectedReq.type?.replace('_', ' ') }}</span></div>
           <div><span class="text-gray-500">Request Date:</span> <span class="font-medium">{{ formatDate(selectedReq.request_date) }}</span></div>
           <div><span class="text-gray-500">Required Date:</span> <span class="font-medium">{{ formatDate(selectedReq.required_date) }}</span></div>
-          <div class="col-span-2"><span class="text-gray-500">Purpose:</span> <span class="font-medium">{{ selectedReq.purpose || '—' }}</span></div>
+          <div class="col-span-2"><span class="text-gray-500">Purpose:</span> <span class="font-medium">{{ selectedReq.purpose || '-' }}</span></div>
           <div v-if="selectedReq.remarks" class="col-span-2">
             <span class="text-gray-500">Remarks:</span>
             <span class="font-medium text-red-600 ml-1">{{ selectedReq.remarks }}</span>
@@ -150,7 +173,7 @@
         <table class="w-full text-sm border rounded-lg overflow-hidden">
           <thead class="bg-gray-50">
             <tr class="text-left text-gray-500">
-              <th class="px-3 py-2">Product</th>
+              <th class="px-3 py-2">Item</th>
               <th class="px-3 py-2">Requested</th>
               <th class="px-3 py-2">Approved</th>
               <th class="px-3 py-2">Fulfilled</th>
@@ -158,10 +181,10 @@
           </thead>
           <tbody>
             <tr v-for="item in selectedReq.items" :key="item.id" class="border-t">
-              <td class="px-3 py-2">{{ item.product?.name }}</td>
+              <td class="px-3 py-2">{{ item.product?.name || item.item_description || '-' }}</td>
               <td class="px-3 py-2">{{ item.requested_quantity }}</td>
-              <td class="px-3 py-2">{{ item.approved_quantity ?? '—' }}</td>
-              <td class="px-3 py-2 font-semibold text-green-600">{{ item.fulfilled_quantity ?? '—' }}</td>
+              <td class="px-3 py-2">{{ item.approved_quantity ?? '-' }}</td>
+              <td class="px-3 py-2 font-semibold text-green-600">{{ item.fulfilled_quantity ?? '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -172,7 +195,7 @@
     <AppModal :show="showApproveModal" title="Approve Requisition" @close="showApproveModal = false">
       <div class="space-y-3">
         <div v-for="item in approveItems" :key="item.id" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
-          <span class="flex-1 text-sm text-gray-700">{{ item.product?.name }}</span>
+          <span class="flex-1 text-sm text-gray-700">{{ item.product?.name || item.item_description || '-' }}</span>
           <span class="text-xs text-gray-400">Req: {{ item.requested_quantity }}</span>
           <input v-model="item.approved_quantity" type="number" min="0" :max="item.requested_quantity" class="w-20 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
@@ -182,7 +205,29 @@
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showApproveModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="approveRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : '✅ Approve' }}</button>
+          <button @click="approveRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Approving...' : 'Approve' }}</button>
+        </div>
+      </div>
+    </AppModal>
+
+    <!-- Fulfill Modal -->
+    <AppModal :show="showFulfillModal" title="Fulfill Requisition" @close="showFulfillModal = false">
+      <div class="space-y-3">
+        <!-- Fixed Asset fulfill -->
+        <div v-if="selectedReq?.type === 'fixed_asset'" class="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
+          Fixed asset requisition fulfill করলে status Fulfilled হবে। Actual asset assignment Fixed Assets page থেকে করতে হবে।
+        </div>
+        <!-- Consumable fulfill -->
+        <template v-else>
+          <div v-for="item in fulfillItems" :key="item.id" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+            <span class="flex-1 text-sm text-gray-700">{{ item.product?.name }}</span>
+            <span class="text-xs text-gray-400">Approved: {{ item.approved_quantity }}</span>
+            <input v-model="item.fulfilled_quantity" type="number" min="0" :max="item.approved_quantity" class="w-20 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </template>
+        <div class="flex gap-3 pt-2">
+          <button @click="showFulfillModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+          <button @click="fulfillRequisition" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Processing...' : 'Fulfill' }}</button>
         </div>
       </div>
     </AppModal>
@@ -198,7 +243,7 @@
         </div>
         <div class="flex gap-3 pt-2">
           <button @click="showRejectModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-          <button @click="rejectRequisition" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">{{ saving ? 'Rejecting...' : '❌ Reject' }}</button>
+          <button @click="rejectRequisition" :disabled="saving" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">{{ saving ? 'Rejecting...' : 'Reject' }}</button>
         </div>
       </div>
     </AppModal>
@@ -214,15 +259,25 @@ import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
 
-// Role helpers
 const userRole = computed(() => {
   const roles = auth.user?.roles
   if (!roles) return ''
   const first = Array.isArray(roles) ? roles[0] : Object.values(roles)[0]
   return typeof first === 'string' ? first : first?.name ?? ''
 })
-const canApprove = computed(() => ['super-admin', 'fixed-asset-admin', 'consumable-admin'].includes(userRole.value))
-const isRequester = computed(() => userRole.value === 'requester')
+// For simplicity, we assume each user has one role. Adjust logic if multiple roles are possible.
+function canApproveReq(req) {
+  if (userRole.value === 'super-admin') return true
+  if (userRole.value === 'fixed-asset-admin') return req.type === 'fixed_asset'
+  if (userRole.value === 'consumable-admin') return req.type === 'consumable'
+  if (userRole.value === 'store-admin') return true
+  return false
+}
+
+function canFulfill(req) {
+  if (req.type === 'fixed_asset') return ['super-admin', 'fixed-asset-admin', 'store-admin'].includes(userRole.value)
+  return ['super-admin', 'consumable-admin', 'store-admin'].includes(userRole.value)
+}
 
 const requisitions = ref([])
 const departments = ref([])
@@ -233,11 +288,13 @@ const showModal = ref(false)
 const showViewModal = ref(false)
 const showApproveModal = ref(false)
 const showRejectModal = ref(false)
+const showFulfillModal = ref(false)
 const selectedReq = ref(null)
 const formError = ref(null)
 const filterStatus = ref('')
 const filterType = ref('')
 const approveItems = ref([])
+const fulfillItems = ref([])
 const approveRemarks = ref('')
 const rejectRemarks = ref('')
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
@@ -250,8 +307,16 @@ const form = ref({
 })
 
 function formatDate(date) {
-  if (!date) return '—'
+  if (!date) return '-'
   return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function onTypeChange() {
+  if (form.value.type === 'consumable') {
+    form.value.items = [{ product_id: '', requested_quantity: 1 }]
+  } else {
+    form.value.items = [{ item_description: '', requested_quantity: 1 }]
+  }
 }
 
 async function fetchRequisitions(page = 1) {
@@ -265,14 +330,16 @@ async function fetchRequisitions(page = 1) {
 
 async function fetchMasterData() {
   try {
-    const [d, p] = await Promise.all([
-      api.get('/departments', { params: { per_page: 100 } }),
-      api.get('/products', { params: { per_page: 100 } }),
-    ])
+    const d = await api.get('/departments', { params: { per_page: 100 } })
     departments.value = d.data.data.data
+  } catch (err) {
+    console.error('Failed to load departments', err)
+  }
+  try {
+    const p = await api.get('/products', { params: { per_page: 100, is_active: 1 } })
     products.value = p.data.data.data
   } catch (err) {
-    console.error('Failed to load master data', err)
+    products.value = []
   }
 }
 
@@ -287,13 +354,23 @@ function openModal() {
   showModal.value = true
 }
 
-function addItem() { form.value.items.push({ product_id: '', requested_quantity: 1 }) }
+function addItem() {
+  if (form.value.type === 'consumable') {
+    form.value.items.push({ product_id: '', requested_quantity: 1 })
+  } else {
+    form.value.items.push({ item_description: '', requested_quantity: 1 })
+  }
+}
 function removeItem(index) { if (form.value.items.length > 1) form.value.items.splice(index, 1) }
 
 async function saveRequisition() {
   saving.value = true; formError.value = null
   try {
-    await api.post('/requisitions', form.value)
+    const payload = { ...form.value }
+    if (form.value.type === 'fixed_asset') {
+      payload.items = form.value.items.filter(i => i.item_description?.trim())
+    }
+    await api.post('/requisitions', payload)
     showModal.value = false; fetchRequisitions()
   } catch (err) { formError.value = err.response?.data?.message || 'Something went wrong' }
   finally { saving.value = false }
@@ -327,6 +404,29 @@ async function approveRequisition() {
     fetchRequisitions()
   } catch (err) {
     alert(err.response?.data?.message || 'Could not approve requisition')
+  } finally { saving.value = false }
+}
+
+function openFulfillModal(req) {
+  selectedReq.value = req
+  fulfillItems.value = req.items?.map(item => ({ ...item, fulfilled_quantity: item.approved_quantity })) || []
+  showFulfillModal.value = true
+}
+
+async function fulfillRequisition() {
+  saving.value = true
+  try {
+    if (selectedReq.value.type === 'fixed_asset') {
+      await api.patch(`/requisitions/${selectedReq.value.id}/fulfill`, { items: [] })
+    } else {
+      await api.patch(`/requisitions/${selectedReq.value.id}/fulfill`, {
+        items: fulfillItems.value.map(item => ({ id: item.id, fulfilled_quantity: Number(item.fulfilled_quantity) })),
+      })
+    }
+    showFulfillModal.value = false
+    fetchRequisitions()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Could not fulfill requisition')
   } finally { saving.value = false }
 }
 
