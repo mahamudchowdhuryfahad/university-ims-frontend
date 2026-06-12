@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black bg-opacity-50" @click="$emit('close')"></div>
+    <<div class="absolute inset-0 bg-gray-500 bg-opacity-10" @click="$emit('close')"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full overflow-hidden" :class="maxWidth" @click.stop>
 
       <!-- Header -->
@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   show: Boolean,
@@ -32,6 +32,13 @@ function handleEscape(e) {
   if (e.key === 'Escape' && props.show) emit('close')
 }
 
+watch(() => props.show, (val) => {
+  document.body.style.overflow = val ? 'hidden' : ''
+})
+
 onMounted(() => window.addEventListener('keydown', handleEscape))
-onUnmounted(() => window.removeEventListener('keydown', handleEscape))
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscape)
+  document.body.style.overflow = ''
+})
 </script>

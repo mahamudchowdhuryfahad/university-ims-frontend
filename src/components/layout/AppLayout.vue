@@ -41,7 +41,7 @@
         <span class="text-xs text-gray-400">{{ currentDate }}</span>
       </header>
 
-      <main class="flex-1 p-6 bg-gray-100">
+      <main class="flex-1 p-6 bg-gray-100 relative">
         <router-view />
       </main>
     </div>
