@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <<div class="absolute inset-0 bg-gray-500 bg-opacity-10" @click="$emit('close')"></div>
+    <div class="absolute inset-0 bg-blue-900 bg-opacity-20" @click="$emit('close')"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full overflow-hidden" :class="maxWidth" @click.stop>
 
       <!-- Header -->
