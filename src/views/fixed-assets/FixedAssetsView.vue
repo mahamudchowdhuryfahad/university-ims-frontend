@@ -683,7 +683,7 @@ async function fetchMasterData() {
     try {
       const res = await api.get(url, { params: { per_page: 100 } })
       target.value = res.data.data.data
-    } catch (err) {
+    } catch {
       target.value = []
     }
   }

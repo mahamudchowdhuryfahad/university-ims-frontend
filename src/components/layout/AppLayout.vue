@@ -81,7 +81,7 @@ const navItems = [
   {
     name: 'Consumable Categories',
     to: '/categories',
-    icon: '🏷️',
+    icon: '🗂️',
     roles: ['super-admin', 'consumable-admin', 'store-admin'],
   },
   {
@@ -99,7 +99,7 @@ const navItems = [
   {
     name: 'Brands',
     to: '/brands',
-    icon: '🎨',
+    icon: '🏷️',
     roles: ['super-admin', 'consumable-admin', 'store-admin'],
   },
   {

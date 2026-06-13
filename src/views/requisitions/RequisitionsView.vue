@@ -329,18 +329,18 @@ async function fetchRequisitions(page = 1) {
 }
 
 async function fetchMasterData() {
-  try {
-    const d = await api.get('/departments', { params: { per_page: 100 } })
-    departments.value = d.data.data.data
-  } catch (err) {
-    console.error('Failed to load departments', err)
+  const load = async (url, target) => {
+    try {
+      const res = await api.get(url, { params: { per_page: 100 } })
+      target.value = res.data.data.data
+    } catch {
+      target.value = []
+    }
   }
-  try {
-    const p = await api.get('/products', { params: { per_page: 100, is_active: 1 } })
-    products.value = p.data.data.data
-  } catch (err) {
-    products.value = []
-  }
+  await Promise.all([
+    load('/departments', departments),
+    load('/products', products),
+  ])
 }
 
 function openModal() {
