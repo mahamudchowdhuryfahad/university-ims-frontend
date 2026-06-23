@@ -27,7 +27,7 @@
           <tr v-if="loading"><td colspan="7" class="text-center py-8 text-gray-400">Loading...</td></tr>
           <tr v-else-if="categories.length === 0"><td colspan="7" class="text-center py-8 text-gray-400">No asset categories found</td></tr>
           <tr v-for="cat in categories" :key="cat.id" class="border-b hover:bg-gray-50 transition">
-            <td class="px-4 py-3 text-gray-400">{{ cat.id }}</td>
+            <td class="px-4 py-3 text-gray-400">{{ (pagination.current_page - 1) * 15 + categories.indexOf(cat) + 1 }}</td>
             <td class="px-4 py-3 font-medium text-gray-700">{{ cat.name }}</td>
             <td class="px-4 py-3">
               <span v-if="cat.code" class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">{{ cat.code }}</span>

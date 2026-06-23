@@ -14,6 +14,7 @@
             <th class="px-4 py-3">Warehouse</th>
             <th class="px-4 py-3">Total</th>
             <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Items</th>
             <th class="px-4 py-3">Date</th>
             <th class="px-4 py-3">Actions</th>
           </tr>
@@ -32,6 +33,12 @@
                 'bg-green-100 text-green-700': p.status === 'received',
                 'bg-red-100 text-red-700': p.status === 'cancelled',
               }" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">{{ p.status }}</span>
+            </td>
+            <td class="px-4 py-3 text-gray-500 text-xs">
+              <div v-for="item in p.items?.slice(0,2)" :key="item.id">
+                {{ item.asset_name || item.product?.name }} ({{ item.quantity }})
+              </div>
+              <span v-if="p.items?.length > 2" class="text-gray-400">+{{ p.items.length - 2 }} more</span>
             </td>
             <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(p.created_at) }}</td>
             <td class="px-4 py-3">
@@ -72,7 +79,11 @@
               <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
             </select>
           </div>
-          <div class="col-span-2">
+           <div>
+            <label class="text-xs font-medium text-gray-600">Purchase Date *</label>
+            <input v-model="form.purchase_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
             <label class="text-xs font-medium text-gray-600">Note</label>
             <input v-model="form.note" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
@@ -80,65 +91,77 @@
 
         <!-- Items -->
         <div>
-          <div class="flex justify-between items-center mb-2">
+          <div class="flex justify-between items-center mb-3">
             <label class="text-sm font-medium text-gray-600">Items *</label>
-            <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline">+ Add Item</button>
+            <button type="button" @click="addItem" class="text-blue-600 text-xs hover:underline font-medium">+ Add Item</button>
           </div>
 
-          <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 rounded-xl p-3 mb-3">
-            <div class="grid grid-cols-12 gap-2 items-start">
+          <div v-for="(item, index) in form.items" :key="index" class="border border-gray-200 rounded-xl p-4 mb-3 bg-gray-50">
+            <div class="grid grid-cols-12 gap-3">
+
+              <!-- Type -->
               <div class="col-span-3">
-                <label class="text-xs text-gray-500">Type *</label>
-                <select v-model="item.product_type" @change="resetItem(item)" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
+                <label class="text-xs font-medium text-gray-600">Type *</label>
+                <select v-model="item.product_type" @change="resetItem(item)" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-white">
                   <option value="consumable">Consumable</option>
                   <option value="fixed_asset">Fixed Asset</option>
                 </select>
               </div>
 
-              <div class="col-span-4" v-if="item.product_type === 'consumable'">
-                <label class="text-xs text-gray-500">Product *</label>
-                <select v-model="item.product_id" required class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
+              <!-- Consumable: Product -->
+              <div class="col-span-5" v-if="item.product_type === 'consumable'">
+                <label class="text-xs font-medium text-gray-600">Product *</label>
+                <select v-model="item.product_id" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-white">
                   <option value="">Select Product</option>
                   <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
                 </select>
               </div>
 
-              <div class="col-span-4" v-if="item.product_type === 'fixed_asset'">
-                <label class="text-xs text-gray-500">Asset Name *</label>
+              <!-- Fixed Asset: Name -->
+              <div class="col-span-5" v-if="item.product_type === 'fixed_asset'">
+                <label class="text-xs font-medium text-gray-600">Asset Name *</label>
                 <input v-model="item.asset_name" required placeholder="e.g. Office Chair"
-                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white" />
+                  class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-white" />
               </div>
 
-              <div class="col-span-3" v-if="item.product_type === 'fixed_asset'">
-                <label class="text-xs text-gray-500">Asset Category</label>
-                <select v-model="item.asset_category_id" class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none bg-white">
-                  <option value="">Select Category</option>
-                  <option v-for="ac in assetCategories" :key="ac.id" :value="ac.id">{{ ac.name }}</option>
-                </select>
-              </div>
-
-              <div class="col-span-3" v-if="item.product_type === 'consumable'"></div>
-
-              <div class="col-span-1">
-                <label class="text-xs text-gray-500">Qty *</label>
+              <!-- Qty -->
+              <div class="col-span-2">
+                <label class="text-xs font-medium text-gray-600">Qty *</label>
                 <input v-model="item.quantity" type="number" min="1" required
-                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
+                  class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
               </div>
 
-              <div class="col-span-1">
-                <label class="text-xs text-gray-500">Price *</label>
-                <input v-model="item.unit_price" type="number" min="0" required
-                  class="w-full border rounded-lg px-2 py-2 text-sm mt-1 focus:outline-none" />
+              <!-- Unit Price -->
+              <div class="col-span-2">
+                <label class="text-xs font-medium text-gray-600">Unit Price *</label>
+                <input v-model="item.unit_price" type="number" min="0" step="0.01" required
+                  class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
               </div>
 
-              <div class="col-span-1 flex items-end pb-2">
-                <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700 text-xl">×</button>
+              <!-- Fixed Asset: Category (second row) -->
+              <template v-if="item.product_type === 'fixed_asset'">
+                <div class="col-span-5 col-start-4">
+                  <label class="text-xs font-medium text-gray-600">Asset Category</label>
+                  <select v-model="item.asset_category_id" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-white">
+                    <option value="">Select Category</option>
+                    <option v-for="ac in assetCategories" :key="ac.id" :value="ac.id">{{ ac.name }}</option>
+                  </select>
+                </div>
+              </template>
+
+              <!-- Subtotal + Remove -->
+              <div class="col-span-12 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
+                <span class="text-xs text-gray-400">
+                  Subtotal: <span class="font-semibold text-gray-600">৳{{ formatNumber(Number(item.quantity) * Number(item.unit_price)) }}</span>
+                </span>
+                <button type="button" @click="removeItem(index)" class="text-red-400 hover:text-red-600 text-xs font-medium">✕ Remove</button>
               </div>
+
             </div>
           </div>
 
-          <div class="text-right text-sm font-semibold text-gray-700 mt-2">
-            Total: ৳{{ formatNumber(totalAmount) }}
+          <div class="text-right text-sm font-bold text-gray-700 mt-2 pr-1">
+            Total: <span class="text-blue-700">৳{{ formatNumber(totalAmount) }}</span>
           </div>
         </div>
 
@@ -224,6 +247,7 @@ const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 
 const form = ref({
   supplier_id: '', warehouse_id: '', note: '',
+  purchase_date: new Date().toISOString().split('T')[0],
   items: [{ product_type: 'consumable', product_id: '', asset_name: '', asset_category_id: '', quantity: 1, unit_price: 0 }],
 })
 
@@ -247,25 +271,26 @@ async function fetchPurchases(page = 1) {
 }
 
 async function fetchMasterData() {
-  try {
-    const [s, w, p, ac] = await Promise.all([
-      api.get('/suppliers', { params: { per_page: 100 } }),
-      api.get('/warehouses', { params: { per_page: 100 } }),
-      api.get('/products', { params: { per_page: 100 } }),
-      api.get('/asset-categories', { params: { per_page: 100 } }),
-    ])
-    suppliers.value = s.data.data.data
-    warehouses.value = w.data.data.data
-    products.value = p.data.data.data
-    assetCategories.value = ac.data.data.data
-  } catch (err) {
-    console.error('Failed to load master data', err)
+  const load = async (url, target) => {
+    try {
+      const res = await api.get(url, { params: { per_page: 100 } })
+      target.value = res.data.data.data
+    } catch {
+      target.value = []
+    }
   }
+  await Promise.all([
+    load('/suppliers', suppliers),
+    load('/warehouses', warehouses),
+    load('/products', products),
+    load('/asset-categories', assetCategories),
+  ])
 }
 
 function openModal() {
   form.value = {
     supplier_id: '', warehouse_id: '', note: '',
+    purchase_date: new Date().toISOString().split('T')[0],
     items: [{ product_type: 'consumable', product_id: '', asset_name: '', asset_category_id: '', quantity: 1, unit_price: 0 }],
   }
   formError.value = null
