@@ -94,7 +94,7 @@ const navItems = [
     name: 'Current Assets',
     to: '/current-assets',
     icon: '📍',
-    roles: ['super-admin', 'consumable-admin', 'store-admin', 'requester'],
+    roles: ['super-admin', 'consumable-admin', 'store-admin'],
   },
   {
     name: 'Brands',

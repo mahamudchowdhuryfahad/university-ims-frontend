@@ -268,15 +268,15 @@ const userRole = computed(() => {
 // For simplicity, we assume each user has one role. Adjust logic if multiple roles are possible.
 function canApproveReq(req) {
   if (userRole.value === 'super-admin') return true
-  if (userRole.value === 'fixed-asset-admin') return req.type === 'fixed_asset'
-  if (userRole.value === 'consumable-admin') return req.type === 'consumable'
   if (userRole.value === 'store-admin') return true
   return false
 }
 
 function canFulfill(req) {
-  if (req.type === 'fixed_asset') return ['super-admin', 'fixed-asset-admin', 'store-admin'].includes(userRole.value)
-  return ['super-admin', 'consumable-admin', 'store-admin'].includes(userRole.value)
+  if (userRole.value === 'super-admin') return true
+  if (req.type === 'fixed_asset') return userRole.value === 'fixed-asset-admin'
+  if (req.type === 'consumable') return userRole.value === 'consumable-admin'
+  return false
 }
 
 const requisitions = ref([])
