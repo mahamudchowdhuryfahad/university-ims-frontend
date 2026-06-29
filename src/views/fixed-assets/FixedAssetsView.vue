@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-4" @click="showProductDropdown = false">
 
     <div class="flex justify-between items-center">
@@ -342,6 +342,10 @@
             </select>
           </div>
           <div>
+            <label class="text-xs font-medium text-gray-600">Transfer Date *</label>
+            <input v-model="requestForm.transfer_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
+          </div>
+          <div>
             <label class="text-xs font-medium text-gray-600">Reason</label>
             <input v-model="requestForm.reason" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
           </div>
@@ -386,10 +390,7 @@
             <textarea v-model="requestForm.reason" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none"></textarea>
           </div>
         </template>
-        <div>
-          <label class="text-xs font-medium text-gray-600">Notes</label>
-          <input v-model="requestForm.notes" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none" />
-        </div>
+        
         <div class="flex gap-3 pt-2">
           <button type="button" @click="showRequestModal = false" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" :disabled="saving" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style="background: linear-gradient(135deg, #1A3A6B, #2a5298);">{{ saving ? 'Submitting...' : 'Submit Request' }}</button>
@@ -483,6 +484,10 @@
             <option value="">Select Room</option>
             <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }} ({{ r.room_number }})</option>
           </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Transfer Date *</label>
+          <input v-model="transferForm.transfer_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label class="text-xs font-medium text-gray-600">Reason</label>
@@ -646,7 +651,7 @@ const requestForm = ref({ employee_id: '',
                           notes: '',
                           disposal_date: new Date().toISOString().split('T')[0],method: 'written_off', disposal_value: 0 
                         })
-const transferForm = ref({ to_department_id: '', to_room_id: '', reason: '' })
+const transferForm = ref({ to_department_id: '', to_room_id: '', transfer_date: new Date().toISOString().split('T')[0], reason: '' })
 const assignForm = ref({ employee_id: '', department_id: '', assigned_date: '', notes: '' })
 const distributeForm = ref({ department_id: '', room_id: '' })
 const disposeForm = ref({ disposal_date: new Date().toISOString().split('T')[0], method: 'written_off', disposal_value: 0, reason: '' })
