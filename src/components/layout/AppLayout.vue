@@ -3,9 +3,12 @@
 
     <!-- Sidebar -->
     <aside class="w-56 bg-gray-900 text-white flex flex-col flex-shrink-0">
-      <div class="p-4 border-b border-gray-700">
-        <h1 class="text-lg font-bold text-white">IMS</h1>
-        <p class="text-xs text-gray-400">Inventory Management</p>
+      <div class="p-4 border-b border-gray-700 flex items-center gap-2">
+        <img src="/ciu-logo.png" alt="CIU" class="w-8 h-8 rounded object-contain bg-white p-0.5" />
+        <div>
+          <h1 class="text-sm font-bold text-white leading-tight">CIU IMS</h1>
+          <p class="text-[10px] text-gray-400">Inventory Management</p>
+        </div>
       </div>
 
       <nav class="flex-1 overflow-y-auto py-2">
