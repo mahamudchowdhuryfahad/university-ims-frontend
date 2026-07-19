@@ -465,12 +465,16 @@ function exportDepreciation(type) {
   fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then(res => res.blob())
     .then(blob => {
-      const ext = type === 'excel' ? 'csv' : 'html'
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `depreciation-report.${ext}`
-      a.click()
-      URL.revokeObjectURL(a.href)
+      if (type === 'pdf') {
+        const blobUrl = URL.createObjectURL(blob)
+        window.open(blobUrl, '_blank')
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'depreciation-report.csv'
+        a.click()
+        URL.revokeObjectURL(a.href)
+      }
     })
     .catch(err => alert('Export failed: ' + err.message))
 }
